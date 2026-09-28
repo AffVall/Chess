@@ -1,9 +1,9 @@
 # Direção de design — Salão de Obsidiana
 
 **Projeto:** Gambito, nome provisório.  
-**Versão deste documento:** 1.0 · 27/09/2026.  
-**Entrega:** especificação visual e de interação, aplicada à interface do protótipo.  
-**Estado:** etapas visuais D1–D6 implementadas na interface atual. Regras futuras e raridades aguardam suporte do servidor. Layout e comportamento ainda não foram verificados no navegador; nenhum teste foi executado.
+**Versão deste documento:** 1.1 · 28/09/2026.
+**Entrega:** direção visual e de interação revisada a partir do protótipo.
+**Estado:** D1–D6 têm uma primeira implementação, com diferenças em relação à especificação. Os refinamentos P1–P4 da versão 1.1 foram aplicados ao protótipo, com limites registrados na seção 13. Regras futuras e raridades aguardam suporte do servidor. Conexão, preparação, loja e compra de melhoria foram verificadas no navegador local. Os testes automatizados e o typecheck passaram; outros tamanhos de tela ainda aguardam inspeção.
 
 ## 1. Como usar este documento
 
@@ -24,27 +24,41 @@ Ordem de referência:
 | Decisão | Direção fechada |
 |---|---|
 | Universo visual | Salão monumental de pedra negra; um tabuleiro elevado como objeto central; luz lateral branca e detalhes metálicos discretos. |
-| Tabuleiro | Casas pretas e brancas neutras; sem verde, sépia ou alternância determinada pela raridade. |
+| Tabuleiro | Cinza-carvão `#373B43` e porcelana `#F5F5F3`; acabamento liso, peças com contorno e estados sobrepostos legíveis. |
 | Peças | Silhuetas clássicas, porcelana branca e obsidiana negra; SVG com relevo leve, contornos contrastantes e base legível. |
 | Tipografia | Cormorant Garamond para títulos; Manrope para interface, regras e números. |
 | Cores auxiliares | Prata como estrutura, ouro envelhecido como destaque; azul mineral para raras. |
 | Tela inicial | Uma composição cênica com peças monumentais, título curto e acesso direto ao jogo. |
-| Preparação | Tabuleiro dominante, inspector da peça, orçamento legível e mercado de cinco ofertas na versão futura. |
+| Preparação | Tabuleiro dominante, ficha persistente da seleção e compra com alvo/preço explícitos; oito ofertas atuais, cinco somente após mudança de regras. |
 | Partida | Tabuleiro frontal, relógios próximos aos jogadores, efeitos curtos e informações acessíveis por seleção. |
 | Animações | Responder à ação; raras e lendárias têm revelações próprias; nenhuma decoração animada em repetição durante a partida. |
 | Personalização | Preparar separação visual entre aparência e regra. Inventário, desbloqueios e recompensas ficam adiados. |
+
+### Revisão 1.1: decisões com maior impacto
+
+| Decisão refinada | Aplicação | Por quê |
+|---|---|---|
+| Concentrar a grandiosidade | Pedestal em três patamares e portal escalonado na entrada; moldura discreta durante o jogo. | Escala e geometria dão identidade sem disputar atenção com as casas. |
+| Diminuir ornamentação de interface | Uma ação principal por área; remover frases/legendas que repetem o título; reservar molduras fortes ao tabuleiro. | A composição ganha hierarquia e as decisões ficam mais rápidas. |
+| Preservar contexto no celular | Seleção fica numa faixa compacta; detalhes abrem por pedido; mercado lembra a peça e a oferta escolhidas. | Consultar uma peça não deve esconder o tabuleiro nem interromper a comparação. |
+| Explicar a troca antes da compra | Mostrar efeito atual, novo efeito, reembolso, preço e saldo previsto junto da ação. | O jogador entende o que perde e o que ganha sem fazer contas de cabeça. |
+| Separar os sinais de jogo | Seleção nos cantos, último lance em filete, xeque em borda interna e foco externo. | Estados simultâneos continuam distinguíveis nas duas cores de casa. |
+| Celebrar sem atrasar | Uma cerimônia por oferta nova; compra recebe confirmação curta; nenhum efeito bloqueia ação. | Raras e lendárias mantêm personalidade sem tornar a preparação cansativa. |
+| Preparar cosméticos legíveis | Aparência neutra local futura e marcadores funcionais fora da decoração. | Personalização não prejudica reconhecimento de peças, habilidades ou tempo. |
+
+Esta revisão orienta os refinamentos do protótipo. A lista de aplicação na seção 13 distingue ajustes de interface de funcionalidades que ainda dependem de regras; o registro abaixo dela descreve o que foi aplicado.
 
 ## 2. Conceito artístico
 
 ### O gesto visual que identifica o jogo
 
-Um **tabuleiro sobre um pedestal de obsidiana**, cercado por um arco arquitetônico incompleto. O arco aparece na composição inicial e, em versão mínima, na moldura de revelação. O corte diagonal do topo do bispo inspira os recortes do pedestal, das cartas e do símbolo provisório.
+Um **tabuleiro sobre um pedestal de obsidiana em três patamares**, cercado por um portal escalonado incompleto. O portal usa dois montantes largos e três recuos no topo; a assimetria vem da luz lateral e das peças, não de controles inclinados. Aparece na composição inicial e, em versão mínima, na moldura de revelação. O corte diagonal do topo do bispo inspira apenas o símbolo e pequenos recortes de cartas, preservando a silhueta monumental do pedestal.
 
 “Babilônico” será traduzido em escala, profundidade, iluminação e cerimônia. A arquitetura terá degraus e volumes monolíticos, sem exigir uma representação histórica da Babilônia. As peças continuam imediatamente reconhecíveis como xadrez.
 
 Três intensidades do mesmo mundo:
 
-- **Entrada:** monumental. Um bispo branco e uma torre negra ampliados atrás do tabuleiro; arco, sombra longa e luz rasante. Uma única entrada coreografada.
+- **Entrada:** monumental. Um bispo branco e uma torre negra ampliados atrás do tabuleiro; portal escalonado, sombra longa e luz rasante. Uma única entrada coreografada.
 - **Preparação:** tátil. A pessoa escolhe peças e cartas como objetos de uma coleção sobre uma mesa de pedra. A loja é uma fileira de ofertas, com posição estável.
 - **Partida:** concentrada. A arquitetura recua; ficam tabuleiro, peças, relógios e informação. A decisão precisa ser legível antes de qualquer espetáculo.
 
@@ -56,11 +70,13 @@ Três intensidades do mesmo mundo:
 - Profundidade por sobreposição, borda dupla e sombra localizada. Evitar vidro desfocado sobre o tabuleiro.
 - Tipografia alinhada à esquerda nas áreas funcionais. Resultado e revelação podem centralizar uma frase curta.
 - Cada tela tem um protagonista: cenário inicial; tabuleiro na preparação; tabuleiro e relógio na partida.
+- Na entrada, a cena ocupa a maior área, mas o formulário tem a ação mais evidente. Durante a partida, cabeçalho e títulos recuam para deixar tabuleiro e relógios no primeiro campo de visão.
+- Reservar acabamento material ao pedestal, às peças e às cartas. Ficha, histórico e ajuda usam superfícies simples; não transformar cada bloco de texto em um objeto com brilho e sombra.
 - Nada de partículas contínuas, neblina passando sobre casas, cursores personalizados, tilt seguindo o mouse ou tremor de câmera.
 
 ### Revisão da direção contra o pedido
 
-O protótipo usa verde e creme, título com trecho dourado em itálico, caixas arredondadas e oito ofertas. A nova proposta troca essa estrutura visual por preto/branco, volumes arquitetônicos, peças com acabamento próprio e cartas com diagramas de movimento. O caráter do jogo vem dos objetos de xadrez e da montagem do exército. Não dependerá de slogans, números gigantes ou efeitos luminosos genéricos.
+A primeira proposta substituiu o verde e creme por pedra, porcelana e metal. A revisão mantém essa direção e as oito ofertas reais, mas concentra a arquitetura no portal/pedestal, reduz legendas decorativas repetidas e aproxima alvo, efeito e custo da compra. O caráter do jogo vem dos objetos de xadrez e da montagem do exército. Tipografia cerimonial e dourado apoiam essa identidade sem dominar os controles.
 
 ## 3. O que veio do usuário e o que precisa de regra
 
@@ -114,7 +130,7 @@ As seis cores centrais:
 |---|---|---|
 | `--color-void` | `#08090B` | Fundo principal, profundidade do cenário. |
 | `--color-stone` | `#191C22` | Painéis e corpos das cartas. |
-| `--color-board-black` | `#101114` | Casas pretas, neutralidade visual. |
+| `--color-board-black` | `#373B43` | Casas escuras em cinza-carvão, com contraste claro sobre a porcelana. |
 | `--color-board-white` | `#F5F5F3` | Casas brancas e superfícies de porcelana. |
 | `--color-silver` | `#B8C2CE` | Texto secundário, filetes e indicadores neutros. |
 | `--color-gold` | `#D8B777` | Destaque cerimonial e lendário. |
@@ -138,18 +154,20 @@ Usar as cores semânticas como texto sobre fundo escuro ou como borda/ícone. So
 
 As cores são especificação, não laudo de contraste já medido. Na futura etapa de verificação, exigir contraste de texto de pelo menos 4,5:1, texto grande de 3:1 e indicadores funcionais de 3:1; ajustar tokens mantendo a direção.
 
+O dourado preenchido identifica a ação principal da área. Ouro, seleção e raridade lendária usam formatos diferentes: moeda com valor, cantos da casa e selo com a palavra “Lendário”. Uma carta não ganha contorno dourado apenas por ser compatível. Verde de confirmação exige marca de pronto; verde de raridade exige selo “Incomum”. Vermelho fica reservado a xeque, erro e ação destrutiva; captura possível usa marcas neutras de alto contraste.
+
 ### 4.2 Tipografia
 
 - **Cormorant Garamond**, pesos 500/600: título inicial, títulos de tela e resultado. Proporção alta, cortes elegantes, sem usar itálico colorido para destacar uma palavra.
 - **Manrope**, pesos 400/500/600/700: todo o restante, incluindo cartas e relógios. Números tabulares no relógio e nos orçamentos.
-- Fontes locais em WOFF2 na futura implementação, com arquivo de licença e origem oficial registrados. Não baixar fontes nesta etapa. Reservar espaço com fallback para não deslocar tabuleiro/controles quando carregarem.
+- A implementação atual usa `next/font` para gerar arquivos auto-hospedados de Cormorant Garamond e Manrope. Manter essa escolha; se a compilação precisar funcionar offline, empacotar WOFF2 com licença e origem registradas. Reservar espaço com fallback para não deslocar tabuleiro/controles quando carregarem.
 - Fallbacks: Georgia para títulos; sistema sans-serif para interface. A aplicação continua utilizável sem as fontes de marca.
 
 | Elemento | Desktop | Celular | Peso / entrelinha |
 |---|---|---|---|
 | Título inicial | 80 px, máximo 2–3 linhas | 44 px | 500 / 0,98 |
 | Título de tela | 40 px | 30 px | 600 / 1,1 |
-| Título de seção | 24 px | 22 px | 600 / 1,2 |
+| Título de painel funcional | 20 px | 18 px | 600 / 1,2, sans |
 | Nome de carta | 18 px | 17 px | 700 / 1,2, sans |
 | Texto de regra | 15 px | 15 px | 400 / 1,5 |
 | Botão / campo | 15 / 16 px | 15 / 16 px | 600 / 1,3 |
@@ -157,6 +175,8 @@ As cores são especificação, não laudo de contraste já medido. Na futura eta
 | Relógio | 32 px | 26 px | 700 / 1,0, tabular |
 
 Evitar textos de regra menores que 14 px. Metadados podem ocupar duas linhas; não truncar preço, compatibilidade ou condição de uso. Labels em caixa normal: “Poder total”, “Suas moedas”.
+
+Nome de melhoria, custo e ação têm prioridade sobre tipo/raridade. Títulos de painel funcional usam Manrope 18–20 px; Cormorant fica nos títulos de tela e resultado. Na partida, título de tela é opcional e não ultrapassa 24 px. Evitar uma legenda acima de cada título: “Peça selecionada” só acrescenta informação se o título não identificar a peça. Substituir “inspector” por **ficha da peça** em textos voltados ao jogador. Usar **Ouro disponível**, **moedas**, **melhoria** e **sacrificar** consistentemente.
 
 ### 4.3 Geometria e espaço
 
@@ -175,7 +195,7 @@ Evitar textos de regra menores que 14 px. Metadados podem ocupar duas linhas; n�
 
 - Visão ortogonal, quadrada, sem perspectiva durante preparação, revelação e partida.
 - Casas exatamente 1:1, todas do mesmo tamanho. `a1` escura. A orientação segue o lado do jogador; nunca girar automaticamente durante a partida.
-- Pretas em `#101114`, brancas em `#F5F5F3`. Nenhum gradiente por casa. Moldura escura com filete prata; detalhe dourado apenas nos quatro cantos externos.
+- Casas escuras em `#373B43`, casas claras em `#F5F5F3`. Nenhum gradiente por casa. Moldura escura com filete prata; detalhe dourado apenas nos quatro cantos externos.
 - Coordenadas na moldura, fora do centro útil das casas. Números e letras se mantêm legíveis com o tabuleiro invertido.
 - Borda total: 16 px em desktop, 8 px no celular, incluindo coordenadas. A sombra fica fora dessa medida.
 - Em partida desktop: dimensionar pela largura **e** pela altura disponível, reservando cerca de 230 px para cabeçalho, duas barras de jogador e controles. Limitar o lado a 680 px. Evitar tabuleiro de 680 px em uma janela baixa que esconda o próprio relógio.
@@ -217,6 +237,8 @@ Manter SVG como formato. Criar uma família visual consistente de seis silhuetas
 | Foco de teclado | Contorno externo bicolor; prioridade visual acima da seleção. |
 | Casa fora da preparação | Tratamento neutro e ícone/legenda de restrição; não esconder as coordenadas. |
 
+**Coexistência:** último lance usa o filete a 1 px da borda; xeque, moldura interna a 4 px; seleção, quatro cantos a 7 px; foco, contorno externo com apoio bicolor. Em casas pequenas, reduzir espessuras mantendo as formas. Marcador de habilidade ocupa o canto superior direito sem esconder coordenadas. Captura possível usa marcas neutras, distintas do vermelho de xeque. Cada estado precisa de sua camada; não reutilizar um único pseudo-elemento que apague o estado anterior. O último lance não aplica banho dourado sobre as casas.
+
 Selecionar peça adversária abre sua ficha, mas nunca aparenta conceder controle sobre ela. Melhorias que alteram ataque precisam ser explicadas por texto e diagrama; não confiar apenas no conjunto de destinos exibido.
 
 ## 6. Preparação, pontuação e posicionamento
@@ -227,6 +249,8 @@ Selecionar peça adversária abre sua ficha, mas nunca aparenta conceder control
 
 Tudo que altera o exército ocorre antes da confirmação. A interface mostra o estado confirmado e sinaliza o comando pendente. Botões que gastam recursos ficam bloqueados enquanto uma mutação de preparação aguarda resposta, para evitar compra duplicada.
 
+Também permitir começar pela oferta: `consultar melhoria → escolher peça compatível → conferir custo → equipar`. Escolher oferta ou alvo não compra nada. Manter a oferta identificada enquanto o jogador seleciona no tabuleiro, com “Cancelar seleção da melhoria”. Se a oferta ou a peça deixar de ser válida, cancelar a intenção e explicar o motivo. A confirmação usa a versão atual recebida do servidor.
+
 ### 6.2 Orçamento
 
 Apresentar uma régua horizontal com três blocos, não três cartões promocionais:
@@ -235,7 +259,7 @@ Apresentar uma régua horizontal com três blocos, não três cartões promocion
 2. **Poder total:** `35 / 50` + ícone de losango dividido.
 3. **Ouro disponível:** `8` + moeda.
 
-Material e poder têm barras independentes. Ouro é um saldo numérico, sem falsa barra de progresso. Abrir “Como é calculado” expõe a soma e o teto da versão de regras.
+Ouro é um saldo numérico. Material e poder usam valores `usado / limite`; a barra de poder, quando existir, é a principal. Material tem uma régua secundária menor: sua contribuição ao poder precisa estar explícita para não sugerir dois orçamentos independentes que podem ser somados. No jogo atual, material é a única barra. Abrir “Como é calculado” expõe a soma e o teto da versão de regras.
 
 Na compra ou deslocamento, mostrar previsão textual `Poder 35 → 39` e `Ouro 8 → 4`. A prévia não altera o saldo real. Se exceder o teto: “Esta escolha excede o poder em 2 pontos.” O botão permanece identificável e sua explicação acessível, mesmo desabilitado.
 
@@ -251,9 +275,11 @@ Em desktop, fica ao lado do tabuleiro. Conteúdo, nesta ordem:
 - Ações de recrutar/trocar, remover melhoria e sacrificar, conforme a fase permitir.
 - Prévia de custos/reembolso perto da ação correspondente.
 
-Sacrifício tem confirmação compacta **dentro do inspector**, com peça, melhoria perdida e valor devolvido. “Confirmar sacrifício” e “Cancelar” ficam separados. Não criar comando de desfazer antes de existir transação reversível no servidor.
+Sacrifício tem confirmação compacta **dentro da ficha**, com peça, melhoria perdida, material antes/depois e valor devolvido discriminado. “Confirmar sacrifício” e “Manter peça” ficam separados. No celular, a confirmação ocupa a mesma ficha expandida; não empilhar outro diálogo. O protótipo passou a usar essa confirmação dentro da ficha. Não criar comando de desfazer antes de existir transação reversível no servidor.
 
-No celular, tocar peça abre painel inferior: cabeçalho, resumo e ações; pode expandir para a regra completa. Fechar preserva a seleção. Não exigir arrastar a peça nem usar toque longo para acessar funções essenciais.
+No celular, tocar peça atualiza uma faixa compacta abaixo do tabuleiro, sem abrir painel automaticamente. A faixa mostra “Peão em e2”, melhoria atual e “Ver peça”. Essa ação abre a ficha inferior, até 80% da altura dinâmica, com rolagem interna. Fechar preserva seleção e posição do mercado. Não exigir arrastar a peça nem usar toque longo para acessar funções essenciais.
+
+Na troca de melhoria, mostrar “Sai: [efeito atual]” e “Entra: [novo efeito]”, preço, reembolso e saldo previsto. Usar “Equipar em Peão e2 por 4 moedas” na primeira compra e “Trocar melhoria” acompanhado do custo líquido na substituição. Se houver crédito líquido, escrever “Receber 2 moedas”; evitar preço negativo. Valores dependem da regra real de reembolso. A compra ocorre nessa ação explícita, sem um diálogo extra quando a prévia já estiver completa.
 
 ### 6.4 Posicionamento futuro
 
@@ -275,26 +301,26 @@ No celular, tocar peça abre painel inferior: cabeçalho, resumo e ações; pode
 Cada oferta usa esta ordem, com área de ação fixa no rodapé:
 
 ```text
-┌ Peões, menores                    Raro ┐
-│              [Arma: ícone]             │
+┌ Golpe diagonal               4 moedas ┐
+│ Arma                 ◇ Raro           │
+│ Peões, menores                        │
 │          [diagrama 5 × 5]              │
-│                                       │
-│ Golpe diagonal                        │
 │ Adiciona captura de uma casa           │
 │ na diagonal.                          │
 │                                       │
-│ Arma · durante a partida              │
+│ Durante a partida                     │
 │ [Ver regra completa]                  │
+│ Alvo: Peão em e2                       │
 │ [Equipar por 4 moedas]                 │
 └───────────────────────────────────────┘
 ```
 
 O exemplo mostra **hierarquia**, não uma habilidade nova aprovada: nome, preço, raridade e grupos devem vir do catálogo. Não preencher cartas finais com conteúdo fictício. Texto completo acessível sem hover.
 
-- Cabeçalho informa alvo e raridade, cada um com nome escrito e símbolo.
+- Cabeçalho informa nome e preço; a linha seguinte traz tipo e raridade real com símbolo/nome, seguida da compatibilidade. O leitor encontra primeiro o que está comparando e quanto custa.
 - Diagrama representa efeito, não uma ilustração genérica de espada. A mesma linguagem visual vale no inspector.
 - Corpo responde: o que muda, quando funciona, quais restrições existem.
-- Rodapé: tipo, preço e ação. Condição de sacrifício, quando existir, é uma linha explícita acima do botão.
+- Rodapé: alvo selecionado, prévia da troca quando necessária e ação com custo. Condição de sacrifício, quando existir, é uma linha explícita acima do botão. Detalhes longos podem expandir a ficha; o efeito principal e suas restrições decisivas permanecem visíveis na carta.
 - Carta não gira para revelar a regra; verso escondido prejudica comparação.
 - Altura mínima 300 px em desktop; crescer para acomodar texto, sem truncar regra. A fileira alinha os rodapés pela carta mais alta.
 
@@ -310,6 +336,8 @@ Para armas diagonais, desenhar quatro segmentos diagonais saindo da origem. Para
 
 Legenda fixa nos detalhes: círculo vazio = movimento sem captura; alvo com quatro marcas = captura; linha tracejada/arco = salto permitido. O diagrama descreve a habilidade isolada e deve dizer “Efeito adicional” quando somar ao movimento tradicional. Não sugerir casas legais em uma posição concreta sem validação do motor.
 
+Indicar “Frente da peça” no diagrama e usar os deslocamentos relativos definidos pelo catálogo; consultar uma peça adversária não deve inverter o significado de “avançar”. Se uma casa permite movimento e captura, combinar os dois símbolos e explicar ambos na legenda. Distância maior que uma casa não prova salto: desenhar salto somente quando a regra o declarar. Efeitos que não cabem em 5 × 5 usam um diagrama maior ou texto específico, nunca destinos cortados sem explicação.
+
 ### 7.3 Raridades
 
 | Raridade | Selo / cor | Material da carta | Movimento especial |
@@ -319,7 +347,7 @@ Legenda fixa nos detalhes: círculo vazio = movimento sem captura; alvo com quat
 | Raro | Losango / azul mineral | Rebaixo e filete azul | Um traço de luz percorre a borda em 420 ms. |
 | Lendário | Coroa geométrica / ouro | Moldura dupla e recorte mais marcado | Selo central abre e acende a moldura em 650 ms; até seis fragmentos locais. |
 
-Raridade nunca é apenas cor. Cartas comuns recebem o mesmo cuidado de tipografia e legibilidade. Animação especial acontece quando a oferta chega/revela ou é equipada; hover não repete a cerimônia. Raridade não significa compra com dinheiro real.
+Raridade nunca é apenas cor. Cartas comuns recebem o mesmo cuidado de tipografia e legibilidade. A cerimônia especial acontece uma vez quando uma oferta nova chega; equipar usa o feedback curto de compra, sem repetir a revelação. Hover, seleção, rolagem e reconexão não repetem a cerimônia. Raridade não significa compra com dinheiro real nem recomendação automática de força: compatibilidade e efeito permanecem mais evidentes que o selo.
 
 ### 7.4 Comportamento da loja futura
 
@@ -330,7 +358,7 @@ Raridade nunca é apenas cor. Cartas comuns recebem o mesmo cuidado de tipografi
 - Enquanto espera, manter a oferta antiga identificável com texto “Comprando…”. Se falhar, preservar oferta/saldo confirmados e explicar a falha.
 - Compra exige alvo válido. Sem peça selecionada, ação vira “Escolher peça”; não gastar ouro para deixar uma melhoria num inventário inexistente.
 - Se houver só uma melhoria permitida por peça, trocar exige resumo da melhoria removida e custo líquido confirmado pelas regras.
-- Usar filtro “Compatíveis com a seleção” para **realçar** ofertas e explicar incompatíveis. Não reordenar ou eliminar espaços da fileira durante compra/reposição.
+- Usar opção “Destacar compatíveis” para realçar ofertas e explicar incompatíveis. O nome descreve o comportamento: não reordenar nem eliminar espaços durante compra/reposição. Manter texto e regras de ofertas incompatíveis legíveis; reduzir apenas ênfase da ação.
 - Quando todas forem incompatíveis, dizer “Estas ofertas não servem à peça selecionada. Escolha outra peça ou atualize a loja.” Não garantir compatibilidade no sorteio sem regra aprovada.
 - Mostrar “Armas e encantamentos · 5 ofertas” quando a nova loja existir. Feitiços não entram nesse mercado sem decisão explícita.
 
@@ -345,7 +373,7 @@ Título: **“A partida começa antes do primeiro lance.”** Subtítulo: “Mon
 ```text
 ┌ Marca                                 Regras · Som ┐
 │                                                   │
-│ A partida começa              arco monumental     │
+│ A partida começa              portal escalonado   │
 │ antes do primeiro lance.      bispo      torre     │
 │                               tabuleiro/pedestal  │
 │ [Seu apelido____________]                         │
@@ -359,7 +387,9 @@ Título: **“A partida começa antes do primeiro lance.”** Subtítulo: “Mon
 - Não mostrar opções de ranking ou conta como se funcionassem. “Ranqueado” entra quando implementado.
 - “Jogar com amigo” abre criação/entrada com código. Depois de criar, mostrar código, botão copiar e convite; confirmar cópia em texto.
 - Estado de espera mantém o usuário na preparação, mostra “Aguardando seu amigo” ou “Buscando adversário” e permite cancelar conforme a sala atual.
-- Celular: título, cena reduzida a até 220 px de altura e formulário; a ação principal aparece cedo. Não exigir atravessar uma imagem de tela inteira.
+- Celular: título, formulário e cena reduzida a até 220 px de altura; a ação principal aparece antes da cena. Não exigir atravessar uma imagem de tela inteira.
+
+Em celular, a ordem funcional é título curto, formulário e cena reduzida; decoração fica abaixo da ação. Os números 39/12 não precisam virar estatísticas de destaque na entrada: o orçamento é explicado na preparação. Exibir “10 minutos por jogador, sem acréscimo” junto dos modos; nos detalhes, informar que os relógios somam até cerca de 20 minutos, além da preparação. Não prometer uma sessão de 10 minutos. Manter “Partida única”; melhor de três permanece uma decisão futura.
 
 ### 8.2 Preparação em desktop
 
@@ -382,19 +412,21 @@ Título: **“A partida começa antes do primeiro lance.”** Subtítulo: “Mon
 
 - Tabuleiro de 480–640 px, conforme espaço. Inspector ocupa coluna de 300–360 px. Conjunto centralizado, sem expandir inspector para preencher a tela.
 - Mercado atravessa a largura útil abaixo. Cinco cartas iguais em largura: `(largura disponível − 4 × 12 px) / 5`. Adotar mínimo de 200 px por carta; quando não couber, usar rolagem horizontal com próximo cartão parcialmente visível.
-- A preparação pode rolar verticalmente. O rodapé de ação mantém “Revisar exército” e resumo do orçamento, com espaço reservado para não cobrir cartas.
+- A preparação pode rolar verticalmente. Uma faixa contextual acima do mercado repete peça/casa e ouro quando o tabuleiro sai da área visível; “Ver peça” leva à seleção sem apagá-la. O rodapé de ação mantém “Revisar exército” e resumo do orçamento, com espaço reservado para não cobrir cartas.
 - Depois de confirmar: painel estável “Exército confirmado”, edição bloqueada; ação “Editar exército” somente enquanto o servidor ainda aceitar cancelar a confirmação. Quando a revelação começou, não oferecer edição.
 - Após duas confirmações, abrir revelação sem nova confirmação redundante.
 
 ### 8.3 Preparação no celular
 
-- Cabeçalho compacto 56 px, orçamento logo abaixo em três colunas; se texto ampliado, orçamento quebra em linhas.
-- Tabuleiro em largura total. Barra “Peça selecionada” logo abaixo abre inspector.
-- Mercado abaixo, como faixa horizontal. Carta com largura `min(80vw, 300px)`; rolagem com encaixe suave, barra de rolagem disponível e indicação textual “Oferta 2 de 5”. Não mover automaticamente a faixa após compra.
+- Cabeçalho compacto 56 px, orçamento logo abaixo em duas colunas hoje e três quando existir poder; com texto ampliado, quebra em linhas.
+- Tabuleiro em largura total. A faixa da seleção aparece logo abaixo e abre a ficha somente por “Ver peça”. Na partida, tocar uma peça também não abre um painel que encobre casas automaticamente.
+- Mercado abaixo, como faixa horizontal. Carta com largura `min(80vw, 300px)`; rolagem com encaixe suave, barra de rolagem disponível e indicação textual “Oferta 2 de 8”, derivada da quantidade real. Não mover automaticamente a faixa após compra. A faixa contextual do mercado mantém alvo e ouro visíveis.
 - Não usar carrossel automático, swipe obrigatório ou múltiplas áreas horizontais sobrepostas. Botões anterior/próximo disponíveis quando houver overflow.
 - Rodapé fixo “Revisar exército”, incluindo área segura do dispositivo. Reserva de espaço igual à sua altura no conteúdo.
 - Ao escolher “Equipar”, caso não haja alvo, recolher a ficha e orientar seleção no tabuleiro; permitir cancelar. A oferta fica identificada até concluir/cancelar.
 - Inspector/painel pode ocupar até 80% da altura dinâmica; conteúdo interno rola. Não cobrir o botão fechar nem criar fundo interativo atrás dele.
+
+Com ficha ou diálogo aberto, ocultar o rodapé fixo de revisão e prender o foco no painel. Ao fechar, devolver foco à ação que o abriu. Na seleção de alvo iniciada por uma oferta, recolher a ficha antes de retornar ao tabuleiro; após escolher a peça, restaurar a oferta na mesma posição com a prévia de compra, sem comprar automaticamente. Em telas baixas ou com zoom, o rodapé pode voltar ao fluxo normal para preservar área útil.
 
 ### 8.4 Revisão e revelação
 
@@ -427,11 +459,13 @@ Revelação: os dois exércitos aparecem no tabuleiro com uma passagem curta de 
 - Resultado: tabuleiro final continua visível, com “Vitória”, “Derrota” ou “Empate” e motivo. Entrada de jogadas bloqueada pelo estado final. Ações reais: “Voltar ao início” e, futuramente, “Revanche” apenas se houver suporte.
 - Não mostrar XP, ranking ganho, moedas recebidas ou cosmético desbloqueado enquanto esses sistemas não existirem.
 
+O título “É hora de jogar” e a trilha de preparação deixam de ocupar um bloco grande durante a partida. Usar uma linha compacta de modo/fase e apenas uma mensagem de turno junto ao tabuleiro. Mensagem de xeque identifica o lado correto: “Seu Rei está em xeque” ou “Rei adversário em xeque”. Ficha e histórico têm prioridade menor que relógios; instruções genéricas repetidas não ocupam um painel permanente.
+
 ### 8.6 Breakpoints
 
 | Largura | Comportamento |
 |---|---|
-| 320–767 px | Uma coluna; inspector em painel inferior; cartas em faixa horizontal; margens 8–12 px. |
+| 320–767 px | Uma coluna; seleção compacta e ficha inferior sob demanda; cartas em faixa horizontal; margens 8–12 px. |
 | 768–1099 px | Tabuleiro central; inspector abaixo ou lateral somente se ambos couberem; mercado com rolagem e cartas ≥ 200 px. |
 | ≥ 1100 px | Preparação em duas colunas mais mercado; partida em duas colunas. |
 | Paisagem baixa, altura < 600 px | Priorizar tabuleiro e relógios; recolher informações; preparação pode rolar. Nunca bloquear orientação do dispositivo. |
@@ -449,6 +483,7 @@ Layouts devem aceitar nomes de jogadores longos e zoom de texto. Truncar apelido
 - Novos eventos rápidos devem encerrar a animação anterior e desenhar o estado atual. Não formar uma fila que deixe o jogador vendo um tabuleiro atrasado.
 - Redimensionar tela, reconectar ou receber snapshot completo cancela animações de deslocamento em andamento.
 - Animar uma transação uma vez. Não repetir brilho de compra ao selecionar a peça ou receber o mesmo estado novamente. Usar identificação de ação/evento quando disponível; não adivinhar compra a partir de mudança de saldo.
+- A área clicável acompanha sempre o estado confirmado; uma peça visual em trânsito não cria alvo em outra casa. Confirmação de compra e saldo aparecem juntos, antes de qualquer acabamento decorativo. Se a preparação terminar durante uma cerimônia, encerrar o efeito imediatamente.
 
 ### 9.2 Catálogo de animações
 
@@ -465,7 +500,7 @@ Layouts devem aceitar nomes de jogadores longos e zoom de texto. Truncar apelido
 | Roque | Rei e torre se deslocam juntos | 200 ms | Estado final imediato. |
 | En passant | Remover peão capturado em sua casa real; mover atacante | 200 ms | Estado final imediato. |
 | Equipar | Selo da carta se dissolve; marcador aparece na peça | 280 ms | Marcador imediato + mensagem. |
-| Sacrifício na preparação | Peça perde opacidade; saldo muda após confirmação | 180 ms | Remoção imediata. |
+| Sacrifício na preparação | Estado e saldo confirmados mudam juntos; cópia decorativa da peça desaparece | 180 ms | Remoção imediata. |
 | Reposição comum/incomum | Crossfade no mesmo espaço | 160 ms | Troca imediata. |
 | Reposição rara | Luz percorre contorno, sem flash branco | 420 ms | Borda azul estática e selo “Raro”. |
 | Reposição lendária | Selo abre, moldura acende, até seis fragmentos dentro da carta | 650 ms | Moldura estática e selo “Lendário”. |
@@ -479,9 +514,11 @@ Ataque lendário **não** ganha animação longa a cada lance. Sua identidade pe
 
 Se uma atualização trouxer cinco raras/lendárias, animar as bordas em conjunto, sem cinco explosões: no máximo uma carta com fragmentos, escolhida pela maior raridade e, em empate, pelo primeiro espaço. Todas mantêm selo e acabamento correspondentes.
 
+**Orçamento de atenção:** entrada cênica até 700 ms no total, considerando atrasos; resposta comum até 220 ms; equipamento até 280 ms; cerimônia lendária até 650 ms. Nenhuma duração é um bloqueio de clique. Em segundo plano, finalizar efeitos pendentes; ao retornar, mostrar o estado atual. Sob movimento reduzido, usar acabamento estático e mensagem textual, sem perder informação ou prolongar espera.
+
 ### 9.3 Sincronização e implementação visual futura
 
-O componente atual desenha peças dentro de cada casa. A implementação de deslocamento pode usar uma camada transitória sobre o tabuleiro, calculando origem/destino por coordenada e ID da peça. Não usar o índice da casa como identidade permanente da peça. Ao finalizar/cancelar, eliminar duplicata visual.
+O componente atual desenha peças dentro de cada casa e já calcula transição por identidade. Refinamentos devem preservar esse vínculo; uma camada transitória pode representar capturas sem alterar as casas interativas. Não usar o índice da casa como identidade permanente da peça. Ao finalizar/cancelar, eliminar duplicata visual. A implementação inicial não demonstra que todos os eventos do catálogo de animações estejam concluídos.
 
 Preferir CSS e APIs nativas do navegador nesta etapa. Não acrescentar biblioteca de animação ou motor 3D sem uma necessidade que esta especificação não resolva. A correção do estado prevalece quando não há evento suficiente para reconstruir a animação; nesse caso, renderizar diretamente o snapshot.
 
@@ -503,6 +540,8 @@ Categorias futuras previstas:
 - Efeito curto de entrada/resultado.
 
 As casas pretas e brancas permanecem a referência funcional. Uma aparência nunca altera hitbox, silhueta de identificação, cor do lado, destinos legais, descrição de habilidade, orçamento ou regra. Preferências locais de movimento reduzido e efeitos discretos prevalecem sobre cosméticos de qualquer jogador.
+
+Projetar futuramente uma preferência local “Usar aparência padrão” para substituir os cosméticos de ambos os lados apenas na própria tela. Molduras personalizadas não mudam as dimensões úteis do tabuleiro. Retratos ficam dentro da área reservada e não deslocam relógios. Efeitos não cobrem coordenadas nem imitam xeque, captura ou melhoria equipada. A futura prévia de conjunto mostra as seis silhuetas em casas claras e escuras antes de equipar; manter essa regra como critério de criação dos assets.
 
 ### Separação para não precisar refazer o desenho
 
@@ -537,7 +576,7 @@ Não reutilizar moedas de preparação para exibir preço cosmético. Não adici
 | Componente | Responsabilidade |
 |---|---|
 | `AppShell` / cabeçalho | Estrutura, largura, navegação existente. |
-| `LandingScene` | Composição decorativa de arco, pedestal e peças grandes. |
+| `LandingScene` | Composição decorativa de portal escalonado, pedestal e peças grandes. |
 | `Board` | Casas, orientação, seleção e destinos confirmados. |
 | `BoardFrame` | Moldura e coordenadas. |
 | `Piece` | Silhueta e acabamento; nenhuma regra. |
@@ -558,7 +597,7 @@ Não criar todos os componentes vazios antecipadamente. Extrair conforme cada et
 1. Seis silhuetas SVG, reutilizáveis nas duas cores, com gradientes de material locais e IDs únicos por instância.
 2. Ícones SVG para material, poder, moeda, três tipos, quatro raridades, conexão, som e alertas, mantendo espessura consistente.
 3. Diagrama reutilizável de 5 × 5 casas e legenda de movimento/captura/salto.
-4. Cenário SVG de arco/pedestal usando a mesma geometria das peças; versão simplificada para celular.
+4. Cenário SVG/CSS de portal escalonado e pedestal em patamares; versão simplificada para celular.
 5. Fontes Cormorant Garamond e Manrope via `next/font`; Next.js gera os assets auto-hospedados durante a compilação. Se futuramente os builds precisarem ser offline, mover as fontes e suas licenças para arquivos locais.
 
 Sem dependência de geração de imagens para o tabuleiro jogável. Qualquer ilustração futura deve funcionar como decoração e não carregar informação necessária para jogar. Não importar peças de outro jogo sem licença.
@@ -574,24 +613,47 @@ Sem dependência de geração de imagens para o tabuleiro jogável. Qualquer ilu
 5. Usar dados reais. Não mexer em catálogo, saldo, sorteio, servidor, relógio ou regras para preencher um layout.
 6. Não implementar cosméticos, conta, loja real, feitiço, ranqueado, nova economia ou melhor de três dentro de uma tarefa de redesenho visual.
 
-### Etapas visuais concluídas
+### Primeira implementação e dependências
+
+“Implementada” abaixo significa que existe código para a etapa, sem comprovação visual. A primeira versão tinha coordenadas dentro das casas, preenchimento dourado no último lance, ficha móvel sem painel e sacrifício em diálogo separado. P1–P4 corrigem esses pontos e acrescentam compra com alvo/custos e destaque de tempo baixo. O catálogo completo de animações continua sendo referência: capturas com camada transitória, cerimônias de raridade e cosméticos não estão concluídos.
 
 | Etapa | Alterações | Arquivos principais | Estado |
 |---|---|---|---|
 | D1 — Fundação | Tokens, tipografia, campos/botões/diálogos e estrutura responsiva. | `app/globals.css`, `app/layout.tsx`, `components/Modal.tsx` | Implementada; sem teste visual. |
 | D2 — Tabuleiro | Preto/branco, moldura, peças SVG, coordenadas, estados e navegação por setas. | `components/Board.tsx`, `components/Piece.tsx` | Implementada; orientação preservada no código, legibilidade não verificada no navegador. |
 | D3 — Entrada | Cenário monumental, título e acesso a casual/amigos/código. | `components/GameApp.tsx`, CSS da cena | Implementada usando CSS e tabuleiro decorativo. |
-| D4 — Preparação atual | Inspector, orçamento atual, oito ofertas e diagramas; confirmação do sacrifício. | `components/GameApp.tsx`, `components/AbilityDiagram.tsx` | Implementada para os efeitos reais; sem raridades ou regras futuras. |
+| D4 — Preparação atual | Inspector, orçamento atual, cinco ofertas visíveis (oito no controle de desenvolvimento) e diagramas; confirmação do sacrifício. Tabuleiro mostra somente as quatro fileiras do jogador. | `components/GameApp.tsx`, `components/AbilityDiagram.tsx` | Implementada para os efeitos reais; sem raridades ou regras futuras. |
 | D5 — Partida | Barras, relógios, ficha, histórico, promoção, conexão, revisão e resultado. | `components/GameApp.tsx`, `app/globals.css` | Estados representados; sem teste visual. |
 | D6 — Movimento | Transição da peça por identidade entre origem e destino; rei e torre no roque; movimento reduzido e cancelamento por nova posição. | `components/Board.tsx`, `app/globals.css` | Implementada com eventos de estado recebidos. Efeitos de raridade/vida aguardam catálogo e regras reais. |
-| R — Novas regras | Projeto separado para resolver seção 3 e implementar servidor/catálogo antes da interface correspondente. | `lib/catalog.ts`, `lib/draft.ts`, `lib/types.ts`, `server/ChessRoom.ts`, eventualmente `lib/chess.ts` | Economia, cinco ofertas, reposição, classes, raridades e avanço validados autoritativamente. |
+| R — Novas regras | Projeto separado para resolver seção 3 e implementar servidor/catálogo antes da interface correspondente. | `lib/catalog.ts`, `lib/draft.ts`, `lib/types.ts`, `server/ChessRoom.ts`, eventualmente `lib/chess.ts` | Pendente: economia, cinco ofertas, reposição, classes, raridades e avanço precisam de validação autoritativa. |
 | D7 — Interface das novas regras | Poder, mercado de cinco espaços, atualização, compatibilidade e efeitos de raridade. | Componentes já preparados | Só habilitar o que R realmente entregou. |
 
 Feitiços, efeitos de morte e duas vidas entram somente em etapas específicas de regras. A seção de animações documenta a direção para eles; não é autorização para implementá-los de forma improvisada.
 
+### Aplicação da revisão 1.1, em ordem
+
+| Prioridade | Mudança concreta | Critério para considerar entregue |
+|---|---|---|
+| P1 — Leitura de partida | Reduzir cabeçalho; distinguir estados do tabuleiro; retirar dourado do fundo do último lance; coordenadas na moldura; destacar relógio baixo. | Seleção, xeque e foco coexistem; barras de jogador identificam corretamente os lados; tabuleiro e relógios têm prioridade de espaço. |
+| P2 — Compra compreensível | Reorganizar carta; expor alvo, reembolso, custo líquido e saldo; permitir começar pela oferta; explicar incompatibilidade sem apagar sua regra. | Selecionar não compra; trocar mostra o efeito perdido e adquirido; ação pendente não permite envio duplicado. |
+| P3 — Preparação móvel | Faixa de seleção, ficha sob demanda, contexto no mercado e sacrifício na mesma ficha. | Seleção sobrevive a abrir/fechar; retornar do tabuleiro preserva oferta/rolagem; painel não se sobrepõe a outro diálogo ou ao rodapé. |
+| P4 — Acabamento | Portal escalonado, pedestal em patamares, menos legendas repetidas e uma única entrada coreografada. | O formulário vem antes da cena no celular; decoração não recebe eventos nem atrasa controles. |
+| P5 — Efeitos futuros | Raridades, cargas e prévia de cosméticos conforme as seções 7, 9 e 10. | Ativar somente após catálogo/eventos reais; manter aparência padrão e movimento reduzido. Cosméticos continuam adiados. |
+
+P1–P4 refinam a interface atual e não dependem da nova economia. Implementar cada prioridade em uma etapa pequena, registrando o resultado. Não acrescentar dependência para painel, ícone ou animação sem necessidade concreta. Os critérios descrevem comportamento esperado, não verificações realizadas nesta revisão documental.
+
+### Aplicação de P1–P4 — 28/09/2026
+
+- P1: cabeçalho da partida compacto; coordenadas na moldura; seleção, xeque e último lance em camadas próprias; captura neutra; relógio abaixo de 30 segundos; lado do adversário e texto de xeque corrigidos. Navegação por setas preserva um ponto de Tab e Esc cancela seleção.
+- P2: `Shop` reúne as ofertas reais, preço/compatibilidade, comparação da troca e saldo previsto. “Escolher peça” inicia seleção sem comprar; a oferta recebe foco ao retornar. Servidor envia `draftComplete` para liberar a próxima mutação após processar a anterior.
+- P3: seleção compacta; `PieceInspector` em painel inferior sob demanda no celular; confirmação de sacrifício dentro da ficha; faixa de alvo/ouro no mercado, navegação anterior/próxima e revisão fixa com área segura. A ficha da peça e o histórico durante a partida permanecem no fluxo abaixo do tabuleiro, sem painel automático.
+- P4: portal escalonado e pedestal em patamares, formulário antes da cena compacta no celular e entradas com duração total de até 700 ms. Movimento reduzido elimina as animações; redimensionamento e mudança de visibilidade cancelam deslocamentos ativos.
+
+A conexão foi revisada separadamente: inicialização conjunta em desenvolvimento/produção, porta configurável, arquivos de ambiente alinhados, origens locais em desenvolvimento, consulta de disponibilidade e nova tentativa. Os detalhes e limites estão em `implementacao.md`. P5 e as novas regras continuam adiados. A conexão, preparação, loja e compra foram verificadas no navegador. Os 15 testes automatizados e typecheck passaram; build e inspeção dos breakpoints seguem pendentes.
+
 ### Critérios de aceite visual para usar quando a verificação for retomada
 
-- [ ] A entrada possui a cena de pedestal/arco e peças monumentais, com acesso claro a casual/amigos.
+- [ ] A entrada possui pedestal em patamares, portal escalonado e peças monumentais, com acesso claro a casual/amigos; formulário antes da cena no celular.
 - [ ] A partida mantém tabuleiro frontal preto/branco e a1 escura; não há resíduos de verde/creme nas casas.
 - [ ] Cada uma das seis peças é identificável nas duas cores e sobre ambas as cores de casa.
 - [ ] Material, poder quando existir e ouro são distinguíveis; prévias não se confundem com valores confirmados.
@@ -599,6 +661,9 @@ Feitiços, efeitos de morte e duas vidas entram somente em etapas específicas d
 - [ ] Mercado preserva espaços; não esconde ofertas reais durante transição entre versões.
 - [ ] Reposição afeta o espaço correto e compra repetida não é enviada durante espera.
 - [ ] Seleção, captura, último lance, xeque e foco podem coexistir sem apagar informação.
+- [ ] A compra informa alvo e custo; substituição mostra efeito perdido, novo efeito, reembolso e saldo previsto sem calcular valores fictícios.
+- [ ] Selecionar peça no celular não abre painel automaticamente; fechar detalhes restaura foco e contexto da oferta.
+- [ ] Diagramas distinguem movimento, captura, ambos e salto conforme o catálogo; “frente” tem significado explícito.
 - [ ] Em 360 × 800 e 390 × 844, tabuleiro não tem rolagem horizontal e ações estão acessíveis por toque.
 - [ ] Em 320 px há fallback compacto utilizável; em 1440 × 900 a composição usa o espaço sem dispersar controles.
 - [ ] Em 1366 × 768 os relógios e o tabuleiro cabem na área da partida; preparação pode rolar.
@@ -621,7 +686,7 @@ As decisões visuais estão fechadas neste guia. Antes de implementar as novas r
 5. Completar nomes e efeitos incompletos; definir se armas adicionam ataques; decidir número de melhorias simultâneas por peça.
 6. Especificar feitiços e efeitos de morte, incluindo janelas de uso e impacto sobre relógio/orçamento. Não usar “ganhar três melhorias ao morrer” sem um fluxo de escolha e tempo definido.
 
-Nome definitivo, distribuição de cosméticos, recompensas e melhor de três podem continuar adiados. As próximas tarefas dependentes desta direção são resolver R antes de apresentar novos recursos de preparação.
+Nome definitivo, distribuição de cosméticos, recompensas e melhor de três podem continuar adiados. Os refinamentos P1–P4 podem avançar sobre o protótipo atual. Resolver R antes de apresentar novas regras de preparação ou o mercado de cinco ofertas.
 
 ## 15. Referências e registro desta entrega
 
@@ -631,3 +696,4 @@ Nome definitivo, distribuição de cosméticos, recompensas e melhor de três po
 - Registro da cópia lida: SHA-256 `d91970639e9f5c37682ac7ab60094d35f1c7c1f38d731bd56396563aee10c1d3`. A instalação usou a referência `main`; esse hash identifica o conteúdo consultado nesta entrega.
 - Aplicação da skill: direção específica ao xadrez, hierarquia tipográfica, composição deliberada, protagonismo visual concentrado e movimento com propósito.
 - Este documento foi originalmente produzido antes de alterar a interface. A aplicação posterior de D1–D6 e seus limites está registrada em [implementacao.md](implementacao.md). Os detalhes de peça são SVG/CSS; não foram adicionados imagens raster nem áudio.
+- Revisão 1.1 em 28/09/2026: releitura da skill local, de `nextmoves.md` e da interface existente; decisões refinadas e divergências registradas por leitura de código. Não houve alteração do aplicativo nem teste nesta revisão.

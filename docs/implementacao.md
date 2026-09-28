@@ -273,3 +273,67 @@ O usuário pediu para colocar em prática o [guia de design](design-do-jogo.md).
 A implementação preserva oito ofertas e os preços/efeitos do catálogo atual. A interface não inventa raridade, compra/atualização da loja, feitiços, colocação avançada, saldo persistente ou conta/cosméticos. O sacrifício continua a usar a mesma ação validada pelo servidor; a nova etapa apenas pede confirmação antes de enviá-la.
 
 **Verificações:** respeitada a orientação vigente de não testar por enquanto. Não foram executados testes, typecheck, build ou inspeção no navegador. Fontes auto-hospedadas por `next/font` podem exigir acesso à rede na próxima compilação, pois o ambiente de desenvolvimento pode ainda não ter gerado os assets da fonte.
+
+## 13. Ajuste do tom das casas escuras — 28/09/2026
+
+As casas escuras do tabuleiro passaram de quase preto para cinza-carvão `#373B43`, preservando o contraste com as casas claras `#F5F5F3`. O guia de design foi atualizado para registrar a paleta aplicada.
+
+**Verificações:** conforme solicitado, nenhum teste, compilação ou inspeção no navegador foi executado.
+
+## 14. Revisão das decisões de design — 28/09/2026
+
+O pedido de revisar e melhorar as decisões resultou na versão 1.1 de `docs/design-do-jogo.md`, usando a skill `frontend-design` e a leitura da interface existente como referência.
+
+- Direção monumental mais específica: portal escalonado e pedestal em três patamares; decoração concentrada na entrada e controles mais discretos durante a partida.
+- Preparação com alvo/custo explícitos, comparação entre melhorias, reembolso e saldo previsto; possibilidade de iniciar pela oferta, sem compra automática.
+- Celular com seleção compacta, ficha aberta sob demanda e preservação da posição do mercado; sacrifício confirmado na mesma ficha.
+- Estados do tabuleiro com formas/camadas distintas; diagramas com orientação, movimento/captura combinados e salto definido pela regra.
+- Cerimônias executadas uma vez por oferta nova; orçamento de duração sem bloqueio de ações; limites de legibilidade para cosméticos futuros.
+- Registro corrigido: D1–D6 são a primeira implementação com divergências; novas regras ainda estão pendentes. P1–P4 priorizam refinamentos da interface atual, e P5 depende de recursos futuros.
+
+**Arquivos alterados nesta revisão:** `docs/design-do-jogo.md` e `docs/implementacao.md`. As mudanças do tom cinza anteriores foram preservadas. Esta etapa revisa a especificação; os novos refinamentos não foram aplicados ao código. `docs/nextmoves.md` foi mantido como fonte original.
+
+**Verificações:** leitura de arquivos e revisão das alterações documentais. Nenhum teste, typecheck, compilação ou inspeção no navegador foi executado, conforme orientação vigente.
+
+## 15. Aplicação do design 1.1 e correção do acesso à preparação — 28/09/2026
+
+O usuário pediu a aplicação da revisão e relatou falha de conexão ao tentar acessar a loja. A loja depende da entrada em uma sala autoritativa. A leitura mostrou problemas concretos na inicialização: `npm start` iniciava somente Next.js; o cliente fixava a porta 2567; o servidor lia apenas `.env` e a autorização local considerava apenas parte dos endereços privados e a porta 3000. Não foi reproduzida a falha em execução, portanto não se atribui uma causa única ao incidente relatado.
+
+### Conexão e inicialização
+
+- `scripts/dev.mjs` agora inicia interface e partidas em desenvolvimento e produção, verifica Node 22+, lê os arquivos de ambiente na ordem de precedência e fixa a porta web. Erros/encerramento de um processo encerram o conjunto com mensagem identificável.
+- `package.json`: `npm start` usa o inicializador conjunto; `start:web` preserva o comando separado para hospedagem. Não houve mudança de dependências.
+- `app/page.tsx` lê `GAME_PORT` em tempo de requisição com `connection()`, conforme a documentação do Next.js instalada. `NEXT_PUBLIC_GAME_SERVER_URL` continua prevalecendo para hospedagem separada.
+- `server/index.ts`: leitura de ambiente alinhada ao inicializador; origens privadas/locais permitidas em desenvolvimento; produção mantém lista explícita. `/health` identifica o serviço e responde com CORS para origens permitidas, sem cache.
+- `GameApp`: consulta de disponibilidade com limite de seis segundos antes de criar/retomar sala; erro de configuração de conexão segura e botão de nova tentativa; indisponibilidade de rede não apaga o token de reconexão nem afirma que a sala terminou.
+- O servidor deve ser reiniciado com a atualização. O novo cliente exige a resposta `/health` atual e a confirmação `draftComplete`. A disponibilidade HTTP não garante que o WebSocket esteja acessível; HTTPS/WSS, portas e origem pública ainda dependem da hospedagem.
+
+### Interface e interação
+
+- `Shop.tsx` (novo): mantém as oito ofertas, preço/efeito/compatibilidade reais; exibe alvo, melhoria que sai/entra, reembolso e saldo previsto; seleção iniciada pela oferta volta ao tabuleiro e retorna à carta sem compra automática. Faixa contextual, destaque de compatíveis e navegação anterior/próxima no celular.
+- `PieceInspector.tsx` (novo): ficha extraída do componente principal; motivos de indisponibilidade ao recrutar e confirmação de sacrifício no próprio painel, com custo discriminado. Seleção compacta abre ficha móvel somente por pedido.
+- `GameApp.tsx`: atalho “Ir para a loja”, acesso de volta ao tabuleiro, revisão fixa no celular, menos repetição na partida e correção da cor do adversário e dos avisos de xeque.
+- `server/ChessRoom.ts`: mensagem `draftComplete` após processar uma alteração, inclusive em caso de rejeição. O cliente mantém um bloqueio local imediato contra cliques duplicados até receber a confirmação; essa mensagem não altera orçamento ou regras.
+- `Board.tsx`: coordenadas fora das casas, camadas independentes para seleção/xeque, foco persistente por setas, Esc para cancelar e cancelamento de animações ao redimensionar ou mudar a visibilidade.
+- `AbilityDiagram.tsx`: frente explícita, legenda, símbolo combinado para movimento/captura e salto indicado somente para a habilidade real que possui essa regra.
+- `Modal.tsx`: variante de painel inferior, contenção de foco e retorno sem deslocar a rolagem.
+- `app/globals.css`: portal escalonado e pedestal em patamares, cena móvel compacta depois do formulário, estados neutros de captura/último lance, alerta de tempo baixo, cartas mais legíveis, rodapé com área segura e movimento reduzido. Casas escuras mantidas em `#373B43`.
+
+### Documentação e limites
+
+Atualizados `README.md`, `.env.example` e `docs/design-do-jogo.md`. O roteiro de aplicação registra P1–P4 e explicita que novas regras, raridades, cosméticos e animações dependentes desses sistemas seguem adiados. A ficha/histórico durante a partida permanecem no fluxo abaixo do tabuleiro; a camada transitória de captura e o catálogo completo de efeitos não foram apresentados como concluídos.
+
+**Causa reproduzida:** `tsx watch` falhava ao criar o pipe local `/tmp/tsx-1000/*.pipe` dentro do inicializador, encerrando o servidor de partidas enquanto a interface aparecia em outra porta. O runner TSX sem watch continua tentando criar esse pipe; o inicializador usa `node --import tsx server/index.ts` para iniciar o serviço diretamente. Depois dessa correção, ambos os serviços iniciaram e o fluxo foi confirmado.
+
+**Verificações concluídas:** navegador local: criou sala casual, preparou e selecionou peão, carregou oito ofertas e equipou `Retirada` no peão. A resposta do servidor confirmou a melhoria e o saldo mudou de 12 para 10 moedas. A sala temporária de verificação foi encerrada. Typecheck passou. Suíte completa passou: 15 testes, incluindo integração de dois clientes, validação, partida, reconexão e resultado. A verificação do servidor exigiu iniciar fora do sandbox, que bloqueava sockets/portas locais. Sem build; responsividade em outras telas não foi inspecionada. Executar o novo `npm run dev` com Node 22+ para posteriores sessões; o README inclui o caminho do Node 24 deste computador.
+
+## 16. Ajustes da tela de preparação — 28/09/2026
+
+Aplicadas as anotações visuais do navegador:
+
+- Removidos o rótulo “Partida casual”, o título e subtítulo de preparação, a faixa de seleção de peça, a explicação de reembolso na ficha, o cabeçalho da loja e o mote do rodapé. O código da sala permanece no topo, alinhado à direita.
+- Na preparação, o tabuleiro exibe apenas as quatro fileiras do próprio jogador (1–4 para brancas; 5–8 para pretas). A partida continua usando as oito fileiras.
+- A loja continua abaixo do tabuleiro e da revisão do exército. Mostra cinco cartões por padrão, com cartões mais compactos. O botão “Mostrar as 8 ofertas · dev” aparece apenas fora de produção.
+- O indicador de navegação da loja recalcula a oferta visível quando a grade muda de tamanho.
+
+**Verificações desta etapa:** typecheck passou com Node 24; suíte completa passou (15 testes). Conferência da tela aberta no navegador confirmou o código da sala no topo, o tabuleiro com quatro fileiras próprias, ausência da faixa removida, cinco cartões e botão de expansão marcado como desenvolvimento. A partida existente foi mantida aberta.

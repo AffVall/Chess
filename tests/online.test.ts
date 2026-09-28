@@ -14,9 +14,10 @@ async function until(check: () => boolean, message: string, timeout = 5000) {
   }
 }
 function observe(room: Room) {
-  const observed = { state: null as Snapshot | null, errors: [] as string[], updates: 0 };
+  const observed = { state: null as Snapshot | null, errors: [] as string[], updates: 0, draftCompletions: 0 };
   room.onMessage('snapshot', (state: Snapshot) => { observed.state = state; observed.updates++; });
   room.onMessage('error', (error: string) => observed.errors.push(error));
+  room.onMessage('draftComplete', () => observed.draftCompletions++);
   room.onMessage('clock', (clocks: Snapshot['clocks']) => { if (observed.state) observed.state.clocks = clocks; });
   room.send('sync');
   return observed;
@@ -57,11 +58,13 @@ test('two real clients: private draft, validation, identical shop, play, reconne
   const ability = white.probe.state!.shop.map(id => abilityById(id)!).find(item => item.kinds.includes('p'))!;
   white.room.send('draft', { type: 'equip', square: 12, ability: ability.id });
   await until(() => white.probe.state?.draft.board[12]?.ability === ability.id, 'equip pawn');
+  await until(() => white.probe.draftCompletions === 1, 'draft confirmation');
   assert.equal(white.probe.state!.draft.gold, 12 - ability.price);
   assert.equal(black.probe.state!.draft.board[12], null);
   assert.equal(black.probe.state!.game, null);
   white.room.send('draft', { type: 'sacrifice', square: 4 });
   await until(() => white.probe.errors.length > 0, 'king cannot be sacrificed');
+  await until(() => white.probe.draftCompletions === 2, 'rejected draft confirmation');
   assert.ok(white.probe.errors.pop()!.includes('Rei'));
   white.room.send('draft', { type: 'equip', square: 12, ability: ability.id, gold: 999 });
   await until(() => white.probe.errors.length > 0, 'forged command rejected');

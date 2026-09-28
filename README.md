@@ -2,7 +2,7 @@
 
 Primeira etapa jogável de um xadrez online com montagem de exércitos e loja aleatória de melhorias. Interface em português, responsiva, com partidas únicas de 10 minutos por jogador, sem acréscimo.
 
-**Andamento:** protótipo local jogável. A direção visual de [design-do-jogo.md](docs/design-do-jogo.md) foi aplicada à entrada, preparação e partida. As regras continuam as do protótipo; a nova loja de cinco ofertas, raridades, posicionamento avançado, conta e cosméticos ainda não existem. Os testes e verificações continuam suspensos por orientação do usuário.
+**Andamento:** protótipo local jogável. A direção visual de [design-do-jogo.md](docs/design-do-jogo.md) foi aplicada à entrada, preparação e partida. As regras continuam as do protótipo; a nova loja de cinco ofertas, raridades, posicionamento avançado, conta e cosméticos ainda não existem. Após a correção da inicialização, a conexão com a loja foi verificada no navegador; typecheck e os 15 testes automatizados passaram.
 
 ## Documentação do projeto
 
@@ -38,13 +38,19 @@ npm run dev
 
 Abra [http://localhost:3000](http://localhost:3000). O comando inicia tanto a interface quanto o servidor de partidas (porta 2567). `Ctrl+C` encerra ambos. Opções adicionais podem ser colocadas em `.env`, a partir de `.env.example`.
 
+Após alterações no inicializador ou na configuração do servidor, encerre a execução anterior e inicie novamente com `npm run dev`. Abrir apenas `npm run dev:web` deixa a loja sem conexão, a menos que `npm run dev:server` esteja ativo em outro terminal. A loja faz parte da preparação: informe um apelido, entre em casual ou crie uma sala com amigo e use **Ir para a loja** abaixo do tabuleiro. Não é preciso esperar outro jogador para preparar o exército.
+
+`npm start` agora inicia os dois serviços em produção, após uma compilação existente. `npm run start:web` e `npm run start:server` são as opções separadas para hospedagem. O inicializador fixa a porta web (`PORT`, padrão 3000) e encerra os serviços juntos; não abre silenciosamente a interface numa porta alternativa. A porta de partidas vem de `GAME_PORT`, também transmitida à página durante a requisição. `NEXT_PUBLIC_GAME_SERVER_URL` prevalece para um servidor em outro endereço e precisa ser configurado antes da compilação.
+
+Se aparecer um erro de conexão, a interface oferece **Tentar novamente**. Ela consulta `/health` antes de criar a sala e preserva o convite de reconexão em falhas de rede. A resposta de saúde confirma apenas a disponibilidade HTTP; a entrada na sala ainda depende da conexão WebSocket. O servidor deve ser reiniciado junto com esta atualização para fornecer a resposta de saúde e a confirmação de alterações da preparação. Em produção, configure `ALLOWED_ORIGINS` com a origem pública exata e disponibilize HTTPS/WSS.
+
 Neste computador, o Node padrão do sistema é 18. A execução feita pelo Codex usa o Node 24 já disponível no ambiente:
 
 ```sh
 PATH=/home/valeria/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin:$PATH npm run dev
 ```
 
-Para conferir no celular na mesma rede, abra `http://IP-DO-COMPUTADOR:3000`, mantenha as portas 3000/2567 acessíveis na rede local e, se necessário, acrescente essa origem em `ALLOWED_ORIGINS`. O cliente usa automaticamente o mesmo nome de host para o servidor. Para hosts distintos, defina `NEXT_PUBLIC_GAME_SERVER_URL` antes de compilar a interface.
+Para conferir no celular na mesma rede, abra `http://IP-DO-COMPUTADOR:3000` e mantenha as portas web/partidas acessíveis na rede local. Em desenvolvimento, localhost e endereços privados de rede são aceitos; em produção, as origens precisam estar em `ALLOWED_ORIGINS`. O cliente usa automaticamente o mesmo nome de host para o servidor. Para hosts distintos, defina `NEXT_PUBLIC_GAME_SERVER_URL` antes de compilar a interface.
 
 ## Roteiro de verificação para uma retomada
 
@@ -58,7 +64,7 @@ Não executar agora. Este roteiro foi preparado antes do pedido de interromper o
 6. Recarregue uma aba durante a partida: ela deve recuperar a sala e o estado. O relógio continua. A sessão de reconexão pertence à aba; para o segundo jogador, abra uma aba nova em vez de duplicar uma partida em andamento.
 7. Proponha e aceite empate, ou desista. O resultado aparece em ambas as abas e bloqueia novas jogadas. Uma nova sala recomeça com 39 pontos e 12 moedas.
 
-Os relógios dão até cerca de 20 minutos por partida, somados os dois lados. A preparação tem um limite de 20 minutos neste protótipo para evitar salas esquecidas; esse limite não representa a duração casual pretendida e será ajustado com o uso.
+Os relógios dão até cerca de 20 minutos por partida, somados os dois lados. A preparação tem um limite de 20 minutos neste protótipo para evitar salas esquecidas; esse limite não representa a duração casual pretendida e será ajustado com o uso. Os 15 testes automatizados e o typecheck passaram em 28/09/2026; a conexão, compra de melhoria e resposta do servidor foram verificadas no navegador local.
 
 ## Comandos de verificação disponíveis para depois
 

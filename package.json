@@ -11,7 +11,8 @@
     "dev:web": "next dev --hostname 0.0.0.0",
     "dev:server": "tsx watch server/index.ts",
     "build": "next build",
-    "start": "next start --hostname 0.0.0.0",
+    "start": "node scripts/dev.mjs --production",
+    "start:web": "next start --hostname 0.0.0.0",
     "start:server": "tsx server/index.ts",
     "typecheck": "tsc --noEmit",
     "test": "tsx --test tests/*.test.ts"

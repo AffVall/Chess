@@ -41,11 +41,14 @@ export class ChessRoom extends Room {
     this.setPatchRate(null);
     if (this.mode === 'friends') await this.setPrivate(true);
     this.onMessage('sync', client => this.sendSnapshot(client));
-    this.onMessage('draft', (client, input: unknown) => this.guard(client, player => {
-      if (this.phase !== 'preparation') throw new Error('A preparação desta partida já terminou.');
-      player.draft = applyDraftAction(player.draft, player.color, this.shop, actionSchema.parse(input));
-      this.publish();
-    }));
+    this.onMessage('draft', (client, input: unknown) => {
+      this.guard(client, player => {
+        if (this.phase !== 'preparation') throw new Error('A preparação desta partida já terminou.');
+        player.draft = applyDraftAction(player.draft, player.color, this.shop, actionSchema.parse(input));
+        this.publish();
+      });
+      client.send('draftComplete');
+    });
     this.onMessage('ready', (client, value: unknown) => this.guard(client, player => {
       if (this.phase !== 'preparation') throw new Error('O exército já está fechado.');
       player.draft.ready = z.boolean().parse(value);
