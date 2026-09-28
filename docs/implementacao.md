@@ -233,3 +233,43 @@ Pendências técnicas:
 - Atualizar o `README.md` quando mudar como executar o projeto ou o que está realmente disponível.
 - Registrar verificações somente quando de fato executadas, com seu alcance e limitações. Durante a orientação atual, preservar os roteiros para depois e não executá-los.
 - Evitar apresentar funcionalidades futuras do roadmap como se estivessem implementadas.
+
+## 11. Direção de design — 27/09/2026
+
+### Pedido e trabalho realizado
+
+O usuário pediu uma skill de design e um documento para outro modelo executar posteriormente: aparência grandiosa, tabuleiro preto e branco, cores compatíveis, atenção às animações e previsão de cosméticos equipáveis conquistados jogando na conta. Cosméticos não devem ser implementados agora. Continua vigente a orientação de não executar testes.
+
+- Lido `docs/nextmoves.md`, incluindo novos tipos de habilidade, feitiços, quatro raridades, cinco ofertas com reposição, atualização paga e posicionamento avançado.
+- Consultados componentes visuais, tipos e preparação existentes para distinguir intenção de produto de implementação real.
+- Instalada a skill `frontend-design`, do repositório público `anthropics/skills`, usando o instalador de skills. Local: `/home/valeria/.codex/skills/frontend-design/`. Suas orientações foram lidas e usadas na elaboração do guia; a skill estará disponível para seleção no próximo turno.
+- Criado [design-do-jogo.md](design-do-jogo.md), com direção “Salão de Obsidiana”, tokens de cor e tipografia, silhuetas, estados de tabuleiro, anatomia das cartas, layouts responsivos, orçamento, fluxo de compra, animações com duração, acessibilidade, estrutura para aparência personalizável e etapas de execução.
+- Atualizado o índice do README para dar acesso ao guia e às anotações de próximas regras.
+
+### Decisões e limites
+
+A direção visual está especificada: pedra negra, porcelana branca, prata e ouro envelhecido, arquitetura monumental na entrada e leitura concentrada durante a partida. Raras e lendárias recebem revelações especiais curtas. Cosméticos ficam separados de habilidades e regras, sem inventário, conta, desbloqueios ou recompensas nesta etapa.
+
+O guia registra recomendações ainda dependentes de regra: cálculo e teto de poder, classificação de peões, evolução do custo de atualização, reembolso, efeitos incompletos, feitiços e consequências do posicionamento avançado. Em especial, a reposição após compra exige impedir sorteios gratuitos por compra e remoção com reembolso integral.
+
+Há uma divergência documentada: as anotações consideram o reposicionamento existente, mas o protocolo atual não possui ação de mover peça durante a preparação; ele permite recrutar/trocar na casa, sacrificar, equipar e remover melhoria. O guia trata deslocamento preservando identidade e fileiras avançadas como implementação futura.
+
+**Arquivos do projeto alterados:** `docs/design-do-jogo.md` (novo), `docs/implementacao.md` e `README.md`. `docs/nextmoves.md` foi preservado. Nenhum código do jogo, dependência do aplicativo, asset visual ou regra foi alterado. A instalação da skill ocorreu fora da pasta do projeto, por solicitação do usuário.
+
+**Verificações:** nenhuma execução de testes, compilação ou inspeção no navegador nesta etapa. Critérios visuais foram documentados para a retomada; não são resultados obtidos.
+
+## 12. Aplicação da direção visual — 27/09/2026
+
+O usuário pediu para colocar em prática o [guia de design](design-do-jogo.md). Foram atualizados os estilos globais, a fonte/moldura do aplicativo, as telas de entrada, preparação e partida e a apresentação da loja existente.
+
+- `app/globals.css`: paleta de obsidiana, prata e ouro; tabuleiro preto/branco; layouts de computador/celular; cartas, orçamento, ficha da peça, estados de seleção/xeque, modais, foco e movimento reduzido.
+- `app/layout.tsx`: título/metadados e Cormorant Garamond/Manrope auto-hospedadas por `next/font`, conforme o guia local do Next.js 16 instalado.
+- `components/Piece.tsx`: gradientes separados para porcelana/obsidiana, contorno e base sombreados, com IDs independentes por SVG.
+- `components/Board.tsx`: novos estados visuais, movimento animado entre origem/destino pela identidade da peça (inclusive roque), foco móvel por setas e uma única casa na ordem de Tab.
+- `components/AbilityDiagram.tsx` (novo): diagrama 5 × 5 das casas adicionais de movimento e captura, derivados dos offsets presentes no catálogo.
+- `components/GameApp.tsx`: composição monumental da entrada; fluxo atual de casual/amigos/código; preparação separando tabuleiro, orçamento, ficha de peça e mercado; oito ofertas reais em grade rolável; revisão e confirmação do sacrifício; partida, relógios, histórico e resultado.
+- `README.md`: andamento atualizado.
+
+A implementação preserva oito ofertas e os preços/efeitos do catálogo atual. A interface não inventa raridade, compra/atualização da loja, feitiços, colocação avançada, saldo persistente ou conta/cosméticos. O sacrifício continua a usar a mesma ação validada pelo servidor; a nova etapa apenas pede confirmação antes de enviá-la.
+
+**Verificações:** respeitada a orientação vigente de não testar por enquanto. Não foram executados testes, typecheck, build ou inspeção no navegador. Fontes auto-hospedadas por `next/font` podem exigir acesso à rede na próxima compilação, pois o ambiente de desenvolvimento pode ainda não ter gerado os assets da fonte.

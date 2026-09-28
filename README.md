@@ -2,10 +2,12 @@
 
 Primeira etapa jogável de um xadrez online com montagem de exércitos e loja aleatória de melhorias. Interface em português, responsiva, com partidas únicas de 10 minutos por jogador, sem acréscimo.
 
-**Andamento:** por orientação do usuário, o trabalho atual está concentrado em documentação. Novas verificações e testes estão suspensos por enquanto. Os comandos e roteiros abaixo são referências para uma retomada, não tarefas que estão sendo executadas agora.
+**Andamento:** protótipo local jogável. A direção visual de [design-do-jogo.md](docs/design-do-jogo.md) foi aplicada à entrada, preparação e partida. As regras continuam as do protótipo; a nova loja de cinco ofertas, raridades, posicionamento avançado, conta e cosméticos ainda não existem. Os testes e verificações continuam suspensos por orientação do usuário.
 
 ## Documentação do projeto
 
+- [Direção de design do jogo](docs/design-do-jogo.md): especificação visual de referência para tabuleiro preto/branco, peças, telas, cartas, animações e cosméticos futuros. Aplicada à interface atual; as decisões para regras que ainda não existem seguem adiadas.
+- [Próximas regras desejadas](docs/nextmoves.md): anotações do usuário sobre poder, classes, raridades, feitiços, posicionamento e loja. O guia de design distingue essas intenções do comportamento atual e identifica as decisões ainda abertas.
 - [Registro da implementação](docs/implementacao.md): o que foi feito, arquivos criados, decisões provisórias, arquitetura atual, histórico de verificações e pendências.
 - [Regras atuais](docs/regras-prototipo.md): economia temporária, loja, habilidades, sacrifícios, relógio e condições de encerramento.
 - [Proposta inicial](docs/plano-mvp.md): os 15 entregáveis de planejamento, preservados como histórico; recomendações conflitantes foram substituídas pelas regras atuais.
@@ -21,6 +23,7 @@ A documentação distingue decisões expressas do usuário de parâmetros escolh
 - Servidor Colyseus validando todas as mudanças de orçamento, jogadas, habilidades e resultados.
 - Movimentos tradicionais, roque, en passant, promoção, xeque/mate, empates, desistência, relógios e reconexão por até 60 segundos.
 - Interface por clique/toque, indicação de movimentos legais, consulta às melhorias do adversário e registro de lances da sala.
+- Direção visual monumental aplicada: tabuleiro preto/branco, peças com acabamento de porcelana/obsidiana, diagramas para as oito melhorias reais, orçamento, confirmação de sacrifício e layouts responsivos.
 
 **Esta etapa é um protótipo local.** Não há contas, ranking, moeda acumulada, PostgreSQL integrado nem recuperação após reiniciar o servidor. Salas e resultados ficam em memória. O pareamento casual junta dois jogadores disponíveis; ainda não estima nível. Para jogar pela internet será necessário hospedar a interface e o servidor com HTTPS/WSS.
 
