@@ -199,7 +199,7 @@ test('preparation cannot start with a checked king', () => {
   black.board[sq('e7')] = { ...black.board[sq('e7')]!, kind: 'r' };
   assert.throws(() => createGame(white, black), /xeque/);
 });
-test('10+0 clock charges elapsed time even on disconnect and never grants increment', () => {
+test('5+0 clock charges elapsed time even on disconnect and never grants increment', () => {
   const clock = new MatchClock();
   clock.start(100);
   assert.equal(clock.settle(1100), null);

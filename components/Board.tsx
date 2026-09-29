@@ -1,18 +1,50 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { abilityById, NAMES, RARITY_NAMES, TYPE_NAMES, type Color } from '@/lib/catalog';
 import { isAdvancedSquare, squareName } from '@/lib/draft';
 import type { Board as BoardType, Move } from '@/lib/types';
 import { Piece } from './Piece';
 import { AbilityIcon } from './AbilityIcon';
 const useSafeLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect;
-interface Props { board: BoardType; color: Color; selected?: number | null; legal?: Move[]; lastMove?: Move | null; checked?: number; onSquare?: (square: number) => void; onCancel?: () => void; preparation?: boolean }
-export function Board({ board, color, selected, legal = [], lastMove, checked, onSquare, onCancel, preparation }: Props) {
+interface Props { board: BoardType; color: Color; selected?: number | null; legal?: Move[]; lastMove?: Move | null; checked?: number; onSquare?: (square: number) => void; onCancel?: () => void; preparation?: boolean; targetSquares?: number[]; onDropPiece?: (from: number, to: number) => void }
+export function Board({ board, color, selected, legal = [], lastMove, checked, onSquare, onCancel, preparation, targetSquares, onDropPiece }: Props) {
   const [focused, setFocused] = useState<number | null>(null);
   const frameRef = useRef<HTMLDivElement>(null);
   const positionsRef = useRef<Map<string, number> | null>(null);
   const interactiveRef = useRef(false);
   const animationsRef = useRef(new Map<string, Animation>());
   const interactive = Boolean(onSquare);
+  const pointer = useRef<{ from: number; x: number; y: number; moved: boolean; size: number } | null>(null);
+  const suppressClickUntil = useRef(0);
+  const [drag, setDrag] = useState<{ from: number; x: number; y: number; size: number; to: number | null } | null>(null);
+  const [keyboardSource, setKeyboardSource] = useState<number | null>(null);
+  function squareAt(x: number, y: number) {
+    const element = document.elementFromPoint(x, y)?.closest<HTMLElement>('[data-square-index]');
+    return element && frameRef.current?.contains(element) ? Number(element.dataset.squareIndex) : null;
+  }
+  function startDrag(event: ReactPointerEvent<HTMLButtonElement>, from: number) {
+    const piece = board[from];
+    if (!onDropPiece || !piece || piece.color !== color || piece.kind === 'k' || event.button !== 0) return;
+    pointer.current = { from, x: event.clientX, y: event.clientY, size: event.currentTarget.clientWidth, moved: false };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+  function moveDrag(event: ReactPointerEvent<HTMLButtonElement>) {
+    const source = pointer.current;
+    if (!source) return;
+    if (!source.moved && Math.hypot(event.clientX - source.x, event.clientY - source.y) < 7) return;
+    source.moved = true;
+    event.preventDefault();
+    setDrag({ ...source, x: event.clientX, y: event.clientY, to: squareAt(event.clientX, event.clientY) });
+  }
+  function endDrag(event: ReactPointerEvent<HTMLButtonElement>, cancelled = false) {
+    const source = pointer.current;
+    pointer.current = null;
+    setDrag(null);
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+    if (!source?.moved) return;
+    suppressClickUntil.current = performance.now() + 300;
+    const to = squareAt(event.clientX, event.clientY);
+    if (!cancelled && to !== null && to !== source.from) onDropPiece?.(source.from, to);
+  }
   const fullRanks = color === 'w' ? [7, 6, 5, 4, 3, 2, 1, 0] : [0, 1, 2, 3, 4, 5, 6, 7];
   const ranks = preparation ? fullRanks.slice(4) : fullRanks;
   const files = color === 'w' ? [0, 1, 2, 3, 4, 5, 6, 7] : [7, 6, 5, 4, 3, 2, 1, 0];
@@ -63,7 +95,9 @@ export function Board({ board, color, selected, legal = [], lastMove, checked, o
     };
   }, [board, interactive]);
 
-  return <div className={`board-frame ${preparation ? 'preparation-frame' : ''}`} ref={frameRef}>
+  return <div className={`board-frame ${preparation ? 'preparation-frame' : ''} ${drag ? 'is-dragging' : ''}`} ref={frameRef}>
+    {drag && board[drag.from] && <div className="drag-piece-preview" style={{ left: drag.x, top: drag.y, width: drag.size, height: drag.size }}><Piece kind={board[drag.from]!.kind} color={color}/></div>}
+    {preparation && <span className="sr-only" role="status">{keyboardSource !== null ? 'Use as setas e Enter para posicionar. Escape cancela.' : 'Clique para selecionar. Arraste para mover. Pelo teclado, use Espaço para levantar a peça.'}</span>}
     <div className="rank-rail" aria-hidden="true">{ranks.map(rank => <span key={rank}>{rank + 1}</span>)}</div>
     <div className="file-rail" aria-hidden="true">{files.map(file => <span key={file}>{'abcdefgh'[file]}</span>)}</div><div className={`chessboard ${preparation ? 'half-board' : ''}`} role="group" aria-label={preparation ? `Suas quatro fileiras iniciais, fileiras ${color === 'w' ? '1 a 4' : '5 a 8'}` : 'Tabuleiro de xadrez'}>
     {ranks.flatMap((rank, r) => files.map((file, f) => {
@@ -71,7 +105,7 @@ export function Board({ board, color, selected, legal = [], lastMove, checked, o
       const target = legal.some(m => m.from === selected && m.to === square);
       const abilities = [abilityById(piece?.weapon), abilityById(piece?.enchantment)].filter(Boolean);
       const abilityLabel = abilities.map(a => `${a!.name}, ${RARITY_NAMES[a!.rarity]}`).join('; ');
-      const className = ['square', (rank + file) % 2 ? 'light' : 'dark', square === selected ? 'selected' : '', lastMove && [lastMove.from, lastMove.to].includes(square) ? 'last-move' : '', square === checked ? 'checked' : '', preparation && isAdvancedSquare(square, color) ? 'advanced-zone' : ''].filter(Boolean).join(' ');
+      const className = ['square', targetSquares ? targetSquares.includes(square) ? 'upgrade-target' : 'upgrade-unavailable' : '', (rank + file) % 2 ? 'light' : 'dark', square === selected ? 'selected' : '', drag?.from === square ? 'drag-origin' : '', drag?.to === square && !piece ? 'drop-target' : '', onDropPiece && piece?.color === color && piece.kind !== 'k' ? 'can-drag' : '', keyboardSource === square ? 'keyboard-lifted' : '', lastMove && [lastMove.from, lastMove.to].includes(square) ? 'last-move' : '', square === checked ? 'checked' : '', preparation && isAdvancedSquare(square, color) ? 'advanced-zone' : ''].filter(Boolean).join(' ');
       const content = <>
         <span className="square-selection" aria-hidden="true"/><span className="square-check" aria-hidden="true"/>
         {piece && <Piece kind={piece.kind} color={piece.color}/>}
@@ -81,8 +115,14 @@ export function Board({ board, color, selected, legal = [], lastMove, checked, o
         {piece?.heart && <span className="heart-marker" title="Segundo coração disponível">♥</span>}
         {target && <span className={piece ? 'legal-capture' : 'legal-dot'} aria-hidden="true"/>}
       </>;
-      return onSquare ? <button key={square} type="button" tabIndex={square === (focused ?? selected ?? ranks[0] * 8 + files[0]) ? 0 : -1} onFocus={() => setFocused(square)} data-square={squareName(square)} className={className} onClick={() => onSquare(square)} onKeyDown={event => {
-        if (event.key === 'Escape') { event.preventDefault(); onCancel?.(); return; }
+      return onSquare ? <button key={square} type="button" tabIndex={square === (focused ?? selected ?? ranks[0] * 8 + files[0]) ? 0 : -1} onFocus={() => setFocused(square)} data-square={squareName(square)} data-square-index={square} className={className} onPointerDown={event => startDrag(event, square)} onPointerMove={moveDrag} onPointerUp={event => endDrag(event)} onPointerCancel={event => endDrag(event, true)} onLostPointerCapture={() => { pointer.current = null; setDrag(null); }} onDragStart={event => event.preventDefault()} onClick={() => { if (performance.now() >= suppressClickUntil.current) onSquare(square); }} onKeyDown={event => {
+        if (event.key === 'Escape') { event.preventDefault(); setKeyboardSource(null); onCancel?.(); return; }
+        if (onDropPiece && (event.key === ' ' || event.key === 'Enter' && keyboardSource !== null)) {
+          event.preventDefault();
+          if (keyboardSource !== null) { if (keyboardSource !== square) onDropPiece(keyboardSource, square); setKeyboardSource(null); }
+          else if (piece?.color === color && piece.kind !== 'k') { setKeyboardSource(square); onSquare(square); }
+          return;
+        }
         const rowDelta = event.key === 'ArrowUp' ? -1 : event.key === 'ArrowDown' ? 1 : 0;
         const fileDelta = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0;
         if (rowDelta || fileDelta) {
@@ -91,7 +131,7 @@ export function Board({ board, color, selected, legal = [], lastMove, checked, o
           const nextFile = Math.max(0, Math.min(7, f + fileDelta));
           frameRef.current?.querySelector<HTMLButtonElement>(`[data-square="${squareName(ranks[nextRow] * 8 + files[nextFile])}"]`)?.focus();
         }
-      }} aria-pressed={selected === square} aria-label={squareName(square) + ': ' + (piece ? NAMES[piece.kind] + (piece.color === 'w' ? ' branco' : ' preto') + (abilities.length ? ', ' + abilityLabel : '') : 'casa vazia') + (target ? ', destino disponível' : '') + (square === checked ? ', Rei em xeque' : '')} >{content}</button> : <div key={square} className={className}>{content}</div>;
+      }} aria-pressed={selected === square} aria-label={squareName(square) + ': ' + (piece ? NAMES[piece.kind] + (piece.color === 'w' ? ' branco' : ' preto') + (abilities.length ? ', ' + abilityLabel : '') : 'casa vazia') + (targetSquares?.includes(square) ? ', disponível para equipar' : '') + (target ? ', destino disponível' : '') + (square === checked ? ', Rei em xeque' : '')} >{content}</button> : <div key={square} className={className}>{content}</div>;
     }))}
   </div></div>;
 }

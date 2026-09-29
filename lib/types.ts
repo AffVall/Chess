@@ -14,6 +14,7 @@ export interface Result { winner: Color | null; reason: string }
 export interface Snapshot {
   roomId: string; mode: 'friends' | 'casual'; ruleset: string; phase: Phase;
   you: Color; players: PlayerView[]; draft: Draft; shop: string[]; refreshCost: number;
+  playerStats: { health: number; timeMs: number };
   game: Game | null; legalMoves: Move[]; spellMoves: Move[]; clocks: Record<Color, number>;
   result: Result | null; moves: string[]; revealUntil: number | null;
   drawOfferedBy: Color | null; claimableDraw: boolean; pendingBait: { choices: string[] } | null;

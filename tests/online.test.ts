@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { randomInt } from 'node:crypto';
 import { Client, type Room } from '@colyseus/sdk';
-import { abilityById } from '../lib/catalog';
+import { abilityById, CLOCK_MS, STARTING_HEALTH } from '../lib/catalog';
 import type { Snapshot } from '../lib/types';
 
 async function until(check: () => boolean, message: string, timeout = 5000) {
@@ -43,6 +43,7 @@ test('two real clients: private draft, validation, identical shop, play, reconne
   const a = observe(first);
   await until(() => !!a.state, 'initial snapshot');
   assert.equal(a.state!.draft.gold, 12);
+  assert.deepEqual(a.state!.playerStats, { health: STARTING_HEALTH, timeMs: CLOCK_MS });
   assert.equal(a.state!.game, null);
   await assert.rejects(client.join('friends', { name: 'Uninvited' }));
   const second = await client.joinById(first.roomId, { name: 'Beto' }); rooms.push(second);
@@ -63,6 +64,7 @@ test('two real clients: private draft, validation, identical shop, play, reconne
   await until(() => black.probe.state?.draft.spells.includes(spell.id) === true, 'buy spell');
   await until(() => black.probe.draftCompletions === 1, 'spell purchase confirmation');
   assert.equal(black.probe.state!.draft.gold, 12 - spell.price);
+  assert.deepEqual(black.probe.state!.playerStats, { health: STARTING_HEALTH, timeMs: CLOCK_MS + 30000 });
   const blackShopAfterSpell = [...black.probe.state!.shop];
   const ability = white.probe.state!.shop.map(id => abilityById(id)!).find(item => item.type === 'weapon' && item.classes.includes('minor'))!;
   white.room.send('draft', { type: 'equip', square: 12, ability: ability.id });
@@ -71,8 +73,10 @@ test('two real clients: private draft, validation, identical shop, play, reconne
   assert.deepEqual(black.probe.state!.shop, blackShopAfterSpell);
   await until(() => white.probe.draftCompletions === 1, 'draft confirmation');
   assert.equal(white.probe.state!.draft.gold, 12 - ability.price);
+  const shopBeforeRefresh = [...white.probe.state!.shop];
   white.room.send('refreshShop');
-  await until(() => white.probe.state?.refreshCost === 2 && white.probe.state.shop.every(id => !originalShop.includes(id)), 'shop refresh');
+  await until(() => white.probe.state?.refreshCost === 2, 'shop refresh');
+  assert.ok(white.probe.state!.shop.every(id => !shopBeforeRefresh.includes(id)), 'refresh excludes the currently visible offers');
   assert.equal(white.probe.state!.draft.gold, 11 - ability.price);
   assert.deepEqual(black.probe.state!.shop, blackShopAfterSpell);
   assert.equal(black.probe.state!.draft.board[12], null);
@@ -89,6 +93,8 @@ test('two real clients: private draft, validation, identical shop, play, reconne
   await until(() => a.state?.phase === 'reveal' && b.state?.phase === 'reveal', 'simultaneous reveal');
   assert.deepEqual(a.state!.game!.board, b.state!.game!.board);
   assert.equal(b.state!.game!.board[12]?.weapon, ability.id);
+  assert.equal(black.probe.state!.clocks.b, CLOCK_MS + 30000);
+  assert.deepEqual(black.probe.state!.game!.spells.b, [], 'automatic spell consumed at reveal');
   const goldBefore = white.probe.state!.draft.gold;
   white.room.send('draft', { type: 'sacrifice', square: 8 });
   await until(() => white.probe.errors.length > 0, 'locked preparation');
@@ -96,17 +102,18 @@ test('two real clients: private draft, validation, identical shop, play, reconne
   white.probe.errors.length = 0;
 
   await until(() => white.probe.state?.phase === 'playing', 'clock start after reveal', 10000);
-  assert.equal(white.probe.state!.clocks.b, 600000);
+  assert.equal(white.probe.state!.clocks.b, CLOCK_MS + 30000);
   black.room.send('move', { from: 52, to: 36, ply: 0 });
   await until(() => black.probe.errors.length > 0, 'out of turn rejection');
   assert.match(black.probe.errors.pop()!, /sua vez/);
   white.room.send('move', { from: 12, to: 28, ply: 0 });
   await until(() => white.probe.state?.game?.ply === 1 && black.probe.state?.game?.ply === 1, 'accepted move');
   assert.deepEqual(white.probe.state!.game!.board, black.probe.state!.game!.board);
-  assert.ok(white.probe.state!.clocks.w < 600000);
+  assert.ok(white.probe.state!.clocks.w < CLOCK_MS);
   black.room.send('useSpell', spell.id);
-  await until(() => !black.probe.state?.game?.spells.b.includes(spell.id), 'cast time spell');
-  assert.ok(black.probe.state!.clocks.b > 600000);
+  await until(() => black.probe.errors.length > 0, 'manual spell rejected');
+  assert.match(black.probe.errors.pop()!, /automaticamente/);
+  assert.ok(black.probe.state!.clocks.b <= CLOCK_MS + 30000, 'no double bonus');
   assert.equal(black.probe.state!.game!.ply, 1, 'the spell does not consume a move');
   black.room.send('move', { from: 52, to: 36, ply: 0 });
   await until(() => black.probe.errors.length > 0, 'stale position rejected');
@@ -120,7 +127,7 @@ test('two real clients: private draft, validation, identical shop, play, reconne
   const resumed = observe(reconnected);
   await until(() => resumed.state?.game?.ply === 1, 'recovered position');
   assert.deepEqual(resumed.state!.shop, black.probe.state!.shop);
-  assert.ok(resumed.state!.clocks.b < 600000, 'disconnect does not pause the clock');
+  assert.ok(resumed.state!.clocks.b < CLOCK_MS + 30000, 'disconnect does not pause the clock');
   reconnected.send('move', { from: 52, to: 36, ply: 1 });
   await until(() => white.probe.state?.game?.ply === 2, 'play after reconnection');
   reconnected.send('resign');

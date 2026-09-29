@@ -1,9 +1,9 @@
 
 # Gambito — nome provisório
 
-Primeira etapa jogável de um xadrez online com montagem de exércitos e loja aleatória de melhorias. Interface em português, responsiva, com partidas únicas de 10 minutos por jogador, sem acréscimo.
+Primeira etapa jogável de um xadrez online com montagem de exércitos e loja aleatória de melhorias. Interface em português, responsiva, com partidas únicas de 5 minutos por jogador, sem acréscimo.
 
-**Andamento:** protótipo local com preparação avançada, cinco ofertas, classes de peças, armas, encantamentos, feitiços, quatro raridades e validação autoritativa no servidor. A direção visual de [design-do-jogo.md](docs/design-do-jogo.md) está aplicada. Esta versão continua sem conta, saldo persistente, ranking, recompensas pós-partida, PostgreSQL ou cosméticos. A etapa `nextmoves` foi implementada, mas não foi verificada com testes ou inspeção visual nesta alteração.
+**Andamento:** protótipo local com preparação avançada, cinco ofertas, classes de peças, armas, encantamentos, feitiços, quatro raridades e validação autoritativa no servidor. A direção visual de [design-do-jogo.md](docs/design-do-jogo.md) está aplicada. Esta versão continua sem conta, saldo persistente, ranking, recompensas pós-partida, PostgreSQL ou cosméticos. A revisão da loja inclui inspeção visual em desktop/celular, verificação de tipos e 19 testes automatizados aprovados; detalhes em `docs/implementacao.md`.
 
 ## Documentação do projeto
 
@@ -20,7 +20,7 @@ A documentação distingue decisões expressas do usuário de parâmetros escolh
 - Sala privada por código/convite e pareamento casual entre duas pessoas.
 - 39 pontos de material, 12 moedas iniciais, Poder máximo 50, recrutamento, reposicionamento e sacrifício de peças, incluindo peões.
 - Cinco ofertas geradas de um catálogo com 16 Armas, Encantamentos e Feitiços. Ambos recebem a mesma loja inicial; compras repõem o espaço individualmente e atualizar o mercado custa 1, 2, 3… moedas.
-- Compatibilidade por classe: peças menores (peão, cavalo, bispo) e maiores (torre, dama). Cada peça pode combinar uma Arma e um Encantamento; Feitiços ficam na reserva da sala.
+- Compatibilidade por classe: peças menores (peão, cavalo, bispo) e maiores (torre, dama). Cada peça pode combinar uma Arma e um Encantamento; Feitiços são aplicados automaticamente ao iniciar a partida. O painel mostra Vida inicial 1.200 e Tempo base 05:00, incluindo bônus preparados.
 - Raridades comum, incomum, raro e lendário, com animação breve em cartas raras e lendárias; movimento reduzido desativa o efeito.
 - Preparação em quatro fileiras próprias, com custo de 2 Poder por peça nas duas fileiras avançadas.
 - Montagens privadas, revisão do exército e revelação simultânea de oito segundos.
@@ -59,16 +59,16 @@ Para conferir no celular na mesma rede, abra `http://IP-DO-COMPUTADOR:3000` e ma
 ## Roteiro manual de preparação
 
 1. Abra duas abas independentes. Na primeira, informe um apelido e crie uma sala. Na segunda, use outro apelido e o código exibido na sala.
-2. Na preparação, confira as cinco ofertas, os valores Material / Poder / Ouro e as casas avançadas. Mova uma peça, depois selecione um peão e equipe uma melhoria compatível; o servidor atualiza orçamento e poder. Sacrifique outro peão e confira o reembolso.
+2. Na preparação, confira as cinco ofertas, os valores Material / Poder / Ouro e as casas avançadas. Clique em uma peça e depois em uma casa vazia: ela não deve se mover. Arraste-a para reposicionar; depois selecione um peão e equipe uma melhoria compatível; o servidor atualiza orçamento e poder. Sacrifique outro peão e confira o reembolso.
 3. Compare as duas abas: a loja inicial deve ser igual e os exércitos devem ficar ocultos durante a montagem. Compre uma oferta em uma aba e confirme que apenas o espaço daquela pessoa é reposto.
-4. Atualize a loja e confira o custo crescente. Se possível, compre um Feitiço e use-o no próprio turno durante a partida.
+4. Atualize a loja e confira o custo crescente. Se possível, compre Instante extra: o painel deve mostrar 05:30 e o bônus deve ser aplicado automaticamente ao começar a partida.
 5. Clique em **Revisar exército** e **Confirmar exército** nas duas abas. Depois de oito segundos de revelação, começa o relógio das brancas.
 6. Mova peças por clique/toque. Apenas o jogador da vez pode jogar; o relógio não ganha segundos após um lance. Consulte habilidades e tente resolver Isca se ela for ativada.
 7. Recarregue uma aba durante a partida: deve recuperar a sala e o estado. O relógio continua. Proponha e aceite empate, ou desista. Uma nova sala começa com 39 pontos e 12 moedas.
 
-Os relógios dão até cerca de 20 minutos por partida, somados os dois lados. A preparação tem um limite de 20 minutos neste protótipo para evitar salas esquecidas; esse limite não representa a duração casual pretendida e será ajustado com o uso. As verificações feitas em etapas anteriores estão registradas em [implementacao.md](docs/implementacao.md); não foram repetidas após as regras `nextmoves`.
+Os relógios base dão até cerca de 10 minutos por partida, somados os dois lados, além dos bônus comprados. A preparação tem um limite de 20 minutos neste protótipo para evitar salas esquecidas; esse limite não representa a duração casual pretendida e será ajustado com o uso. As verificações feitas em etapas anteriores estão registradas em [implementacao.md](docs/implementacao.md), incluindo a revisão da loja e os testes mais recentes.
 
-## Comandos de verificação disponíveis para depois
+## Comandos de verificação
 
 Mantidos como referência; sem nova execução durante a etapa atual de documentação.
 

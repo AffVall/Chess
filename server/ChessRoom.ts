@@ -5,6 +5,7 @@ import { ABILITIES, abilityById, generateShop, replacementOffer, RECONNECT_SECON
 import { applyDraftAction, createDraft, nextRefreshCost, other, validateDraft } from '../lib/draft';
 import { canClaimDraw, createGame, describeMove, gameResult, insufficientMaterial, legalMoves, legalSpellMoves, makeMove, positionKey } from '../lib/chess';
 import { MatchClock } from '../lib/clock';
+import { startingStats } from '../lib/player-stats';
 import type { Draft, Game, Move, Phase, PlayerView, Result, Snapshot } from '../lib/types';
 
 const square = z.number().int().min(0).max(63);
@@ -104,19 +105,8 @@ export class ChessRoom extends Room {
       else if (result) this.finish(result);
       else this.publish();
     }));
-    this.onMessage('useSpell', (client, value: unknown) => this.guard(client, player => {
-      if (!this.active()) return;
-      if (this.pendingBait) throw new Error('Resolva a escolha de Isca antes do próximo lance.');
-      if (!this.game || player.color !== this.game.turn) throw new Error('Ative o feitiço apenas no seu turno.');
-      const id = z.string().max(32).parse(value), ability = abilityById(id);
-      if (ability?.trigger !== 'time-30') throw new Error('Feitiço inválido.');
-      if (!this.game!.spells[player.color].includes(ability.id)) throw new Error('Esse feitiço já foi usado.');
-      this.timer.addTime(player.color, 30_000, performance.now());
-      this.game!.spells[player.color] = this.game!.spells[player.color].filter(id => id !== ability.id);
-      const key = positionKey(this.game!);
-      this.game!.repetitions = { [key]: 1 };
-      this.publish();
-      this.broadcast('clock', this.timer.remaining);
+    this.onMessage('useSpell', client => this.guard(client, () => {
+      throw new Error('Os feitiços são aplicados automaticamente no início da partida.');
     }));
     this.onMessage('chooseBait', (client, value: unknown) => this.guard(client, player => {
       if (!this.pendingBait || this.pendingBait.owner !== player.color || !this.game) throw new Error('Não há uma escolha de Isca para resolver.');
@@ -218,6 +208,11 @@ export class ChessRoom extends Room {
       this.broadcast('error', (error as Error).message);
       return;
     }
+    for (const player of players) {
+      this.timer.remaining[player.color] = startingStats(player.draft).timeMs;
+      this.game!.spells[player.color] = [];
+    }
+    this.game!.repetitions = { [positionKey(this.game!)]: 1 };
     this.phase = 'reveal';
     this.revealUntil = Date.now() + 8000;
     this.clock.setTimeout(() => {
@@ -269,6 +264,7 @@ export class ChessRoom extends Room {
     const snapshot: Snapshot = {
       roomId: this.roomId, mode: this.mode, ruleset: RULESET, phase: this.phase, you: player.color,
       players: [...this.players.values()].map(({ name, color, connected, ready }) => ({ name, color, connected, ready })),
+      playerStats: startingStats(player.draft),
       draft: player.draft, shop: player.shop, refreshCost: nextRefreshCost(player.draft),
       game: this.game ? { ...this.game, repetitions: {} } : null,
       legalMoves: this.game?.turn === player.color && this.phase === 'playing' ? this.availableMoves : [],

@@ -1,9 +1,9 @@
 # Direção de design — Salão de Obsidiana
 
 **Projeto:** Gambito, nome provisório.  
-**Versão deste documento:** 1.6 · 28/09/2026.
+**Versão deste documento:** 2.0 · 29/09/2026.
 **Entrega:** direção visual e de interação revisada a partir do protótipo.
-**Estado:** D1–D7 estão implementadas em código. A revisão 1.4 empilha os selos das peças e acrescenta moldura metálica e reflexo lento. As revisões 1.5 e 1.6 reorganizam a hierarquia das cartas, compartilham o ícone de arma, mantêm dicas contextuais estáveis e permitem desmarcar a peça selecionada; não tiveram testes nem inspeção no navegador. Cosméticos continuam adiados.
+**Estado:** D1–D7 estão implementadas em código. A revisão 1.4 empilha os selos das peças e acrescenta moldura metálica e reflexo lento. As revisões 1.5 e 1.6 reorganizam a hierarquia das cartas, compartilham o ícone de arma, mantêm dicas contextuais estáveis e permitem desmarcar a peça selecionada. A revisão 1.7 coloca o tabuleiro numa aba lateral sobre a loja, com expansão sob o cursor. A revisão 1.8 segue o esboço: loja à esquerda, painel do jogador à direita, dinheiro destacado e aba do tabuleiro sobre a área da loja. A revisão 1.9 acrescenta miniatura ampliada da peça selecionada com seus selos, ações de planejamento junto ao tabuleiro expandido e filtro de ofertas compatíveis. A revisão 2.0 refina loja, retrato e painel expandido, unifica raridades e acrescenta Vida/Tempo e feitiços automáticos. Cosméticos continuam adiados.
 
 ## 1. Como usar este documento
 
@@ -11,10 +11,10 @@ Este guia é a referência visual para a interface atual e para as próximas eta
 
 Ordem de referência:
 
-1. Pedidos atuais do usuário: aparência grandiosa, tabuleiro preto e branco, documentação, cosméticos futuramente equipáveis e obtidos jogando; não implementar cosméticos agora; não testar por enquanto.
+1. Pedidos atuais do usuário: aparência grandiosa, tabuleiro preto e branco, documentação, cosméticos futuramente equipáveis e obtidos jogando; não implementar cosméticos agora. A solicitação atual autoriza verificar bugs e testar esta revisão.
 2. Este documento: decisões de design e sequência da futura implementação visual.
 3. [nextmoves.md](nextmoves.md): anotações originais do usuário sobre pontuação, classes, raridades e loja; decisões abertas e desvios do MVP estão identificados abaixo.
-4. [regras-prototipo.md](regras-prototipo.md): regras que o servidor executa no protótipo 0.2.0.
+4. [regras-prototipo.md](regras-prototipo.md): regras que o servidor executa no protótipo 0.3.0.
 5. [implementacao.md](implementacao.md): histórico e limites do trabalho realizado.
 
 **Distinção essencial para executar:** há um redesenho aplicável ao jogo atual e há interfaces previstas para regras futuras. Só mostrar comandos, valores, raridades e efeitos reais que o servidor consegue fornecer e validar. Não simular funcionalidades futuras dentro da partida para fazer a tela parecer completa.
@@ -360,8 +360,8 @@ O usuário aprovou o padrão de emblemas: traços finos, geometria de losango/c�
 - Enquanto espera, manter a oferta antiga identificável com texto “Comprando…”. Se falhar, preservar oferta/saldo confirmados e explicar a falha.
 - Compra de Arma/Encantamento exige alvo compatível; Feitiços vão para a reserva da partida. Sem alvo, a carta oferece escolher uma peça; nada é comprado automaticamente.
 - Cada peça permite uma Arma e um Encantamento. Trocar um espaço mostra a melhoria removida e o preço líquido confirmado pelo servidor.
-- Usar opção “Destacar compatíveis” para realçar ofertas e explicar incompatíveis. O nome descreve o comportamento: não reordenar nem eliminar espaços durante compra/reposição. Manter texto e regras de ofertas incompatíveis legíveis; reduzir apenas ênfase da ação.
-- Quando todas forem incompatíveis, dizer “Estas ofertas não servem à peça selecionada. Escolha outra peça ou atualize a loja.” Não garantir compatibilidade no sorteio sem regra aprovada.
+- “Filtrar Melhorias” vem ligado depois de selecionar uma peça e mostra apenas ofertas aplicáveis. Ao desligar o filtro, mostrar a loja completa, manter destaque nas compatíveis e reduzir levemente a opacidade das incompatíveis. Não reordenar nem eliminar espaços durante compra/reposição.
+- Se nenhuma oferta for aplicável, explicar que o filtro pode ser desligado para consultar a loja completa. Não garantir compatibilidade no sorteio sem regra aprovada.
 - A composição atual inclui Armas para as duas classes, um Encantamento e um Feitiço; o quinto espaço sorteia do restante. Um Feitiço comprado fica guardado e não é oferecido novamente para o mesmo jogador na sala.
 
 **Reposição:** o sorteio exclui as ofertas visíveis para aquele jogador. Comprar não muda a loja adversária. O MVP não define probabilidades ponderadas por raridade; o catálogo atual é sorteado sem uma tabela de chances explícita.
@@ -710,3 +710,31 @@ O preço aparece apenas no botão de compra/equipamento. Não duplicar custo, al
 
 
 Ao selecionar uma peça no tabuleiro, tocar/clicar nela novamente limpa a seleção. Durante a preparação, se o jogador tiver iniciado uma escolha de melhoria, o segundo clique na peça conclui a escolha em vez de desmarcá-la.
+
+
+## 23. Preparação com loja e painel do jogador
+
+A tela segue o esboço aprovado: o cabeçalho do Gambito permanece no topo; abaixo, a etapa da partida divide uma faixa com o código da sala e “Sair da sala”, alinhados na mesma linha. A área de trabalho tem duas colunas: a loja ocupa a coluna larga à esquerda e mostra cinco cartas em uma fileira; “Atualizar loja” fica abaixo das cartas. O painel “Informações do jogador” permanece visível à direita com Material, Poder total, detalhes da peça selecionada e “Revisar exército”. O saldo aparece centralizado sobre a loja como “Dinheiro”.
+
+Uma aba vertical estreita “Tabuleiro” encosta no canto esquerdo da janela, sem recuo lateral. Recolhida, ela não participa do fluxo da loja. Ao passar o cursor ou focá-la, a aba revela uma camada à frente da coluna da loja, sem cobrir o painel do jogador; nela aparecem jogador adversário, tabuleiro de preparação, jogador local, peças para colocar e inspetor com ações de compra, melhoria e sacrifício. Ao retirar o cursor, ela recolhe. O painel acompanha a altura disponível da área de trabalho e não desloca o conteúdo.
+
+A faixa “Montagem · Revelação · Partida” é uma navegação curta de abas, com a etapa atual sublinhada. O código e a saída da sala usam controles menores na mesma linha. A ficha da peça selecionada mostra uma ilustração ampliada, nome e casa em notação curta (por exemplo, “Peão B2”), além dos ícones e nomes de suas melhorias conectadas. Na loja, “Filtrar Melhorias” vem ligado; cartas incompatíveis somem até o filtro ser desligado, quando aparecem com opacidade reduzida e as compatíveis continuam destacadas.
+
+Em telas sensíveis ao toque, a aba abre/fecha por toque e fecha ao tocar fora. Em telas estreitas, loja e informações do jogador passam a ocupar uma coluna; a aba pode ocupar quase toda a largura para manter o tabuleiro legível, e as cartas voltam ao carrossel horizontal.
+
+
+## 24. Revisão da loja, retrato e planejamento — versão 2.0
+
+Esta seção substitui os detalhes conflitantes das revisões anteriores.
+
+- **Composição:** cinco cartas à esquerda e ficha do jogador à direita. Fundo quase preto, superfícies de grafite, bordas minerais e ouro discreto nas ações. Saldo junto ao título da loja; código e saída na mesma faixa compacta. Cartas têm largura de referência de 250 px e altura pelo conteúdo, com espaços internos reduzidos; a fileira rola quando as cinco ofertas não cabem, em vez de estreitar os cards.
+- **Cartas:** nome e categoria em destaque, compatibilidade em `(Plebeu)` / `(Realeza)` com explicações, desenho do efeito e regra completa. Preço fica no botão. Cartas incompatíveis continuam ocultas com filtro ligado e semitransparentes com filtro desligado. Feitiços exibem “Ativação automática”.
+- **Paleta única:** comum prata `#d8dee7`; incomum azul `#a6d0ff`; raro dourado `#f2d789`; lendário âmbar `#ffbd86`. Carta, selo no tabuleiro, retrato e nome da melhoria usam os mesmos tokens de raridade. A seleção não substitui a cor da raridade por outra.
+- **Retrato:** nome da peça e coordenada, peça ampliada sobre uma casa em perspectiva, selos empilhados à direita com brilho suave. Abaixo, nome, categoria e raridade dos efeitos. Não repetir classes compatíveis nesta ficha.
+- **Jogador:** Vida inicial 1.200 e Tempo base 05:00, acima de Material/Poder. O tempo exibido incorpora feitiços comprados; Instante extra resulta em 05:30. Valores derivam do servidor. Não desenhar barras de dano ou indicar combate por Vida enquanto essa regra não existe.
+- **Tabuleiro expandido:** trilho de 36 px colado ao canto esquerdo, painel sobre a loja com aproximadamente 72% da largura em desktop. Sem título ou instrução acima do tabuleiro: adversário, quatro fileiras próprias, jogador, bandeja de recrutamento e ações da seleção. O botão de recolher fica no trilho. O tamanho do tabuleiro considera a altura da janela para manter a bandeja visível. Compra e troca ficam na mesma bandeja inferior: selecionar casa e comprar; casa ocupada substitui a peça, com preço líquido após reembolso. O inspetor mantém apenas efeitos, remoção e sacrifício com confirmação.
+- **Interação:** clique só seleciona/desmarca peças existentes; reposicionar exige arrastar. Arraste exibe uma peça acompanhando o ponteiro e destaca o destino vazio; casas ocupadas e regras inválidas não alteram o exército. Há alternativa por teclado. Compra e troca exigem primeiro uma casa selecionada e depois um clique na peça da bandeja. Para cartas, escolher primeiro a carta ilumina os alvos válidos; clicar em um deles equipa diretamente e devolve à loja. A seleção comum de casas continua sem mover peças.
+- **Abertura:** cursor sobre o trilho abre; sair do painel recolhe. Clique/toque abre, botão de recolher e toque externo fecham. Painel fechado é inerte para teclado/leitores. Em celular o painel ocupa quase toda a largura e as ações ficam abaixo do tabuleiro.
+- **Responsividade e movimento:** reservar espaço para o trilho, rolar apenas as cartas horizontalmente e deixar a revisão dentro da ficha. Manter entrada e aura discreta das raridades existentes, respeitando movimento reduzido.
+
+**Limite de regra:** Vida é atributo inicial, sem mecânica de dano definida. O único feitiço atual é Instante extra; novos feitiços precisam ter sua resolução automática definida no servidor antes de entrar no catálogo.

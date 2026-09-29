@@ -429,3 +429,66 @@ Pedido: empilhar os selos de melhoria, integrar seu acabamento ao tabuleiro e an
 - `components/TermHelp.tsx` substitui as dicas nativas do navegador por um balão próprio, flutuante sobre a página, que permanece visível enquanto o cursor estiver sobre o termo ou até o foco do teclado sair. Assim não é cortado pelo carrossel da loja e não pisca quando a página recebe clique. Aplicado às classes, tipos, raridade e símbolos dos diagramas.
 - `components/GameApp.tsx`: durante a preparação, clicar outra vez na peça selecionada desmarca-a. Quando uma melhoria está sendo apontada, o clique ainda aplica a melhoria conforme o fluxo existente.
 - **Verificações:** revisão de código e `git diff --check`. Sem testes automatizados ou typecheck nesta etapa.
+
+
+## 25. Loja ao lado do tabuleiro na preparação — 29/09/2026
+
+- `components/GameApp.tsx` e `components/Shop.tsx`: a preparação segue o esboço de referência. A loja ocupa a coluna esquerda; cinco cartas aparecem em uma fileira e o botão de atualizar fica abaixo. A coluna direita exibe informações do jogador, Material, Poder total, peça selecionada e revisão. O dinheiro aparece sobre a loja e não se repete no resumo compacto.
+- `app/globals.css`: a aba vertical do tabuleiro fica à esquerda da área de trabalho e expande sobre a coluna da loja, preservando o painel do jogador à direita. No modo aberto ela contém as barras de jogador e o tabuleiro grande; no fechado não desloca o conteúdo. Código e saída ficam alinhados na faixa do cabeçalho. Em telas estreitas, as colunas empilham e as cartas retornam ao carrossel; toque abre/fecha e toque externo recolhe.
+- Guia de design atualizado (1.8). Nenhuma regra de jogo foi alterada.
+
+**Verificações:** revisão estática do JSX/CSS e `git diff --check`. Não executados testes, typecheck ou inspeção no navegador, conforme orientação de deixar os testes para depois.
+
+## 26. Ficha da peça e planejamento no tabuleiro expandido — 29/09/2026
+
+- `components/PieceInspector.tsx` e `components/GameApp.tsx`: painel do jogador agora mostra uma ficha visual da peça selecionada com miniatura ampliada, nome e casa (por exemplo, “Peão B2”), além dos ícones e nomes das melhorias conectadas. A explicação de classe da peça saiu do inspetor; a compatibilidade continua identificada nas cartas.
+- O tabuleiro expandido ganhou a área de planejamento: adversário, tabuleiro, jogador local, bandeja “Peças para colocar” e inspetor com recrutamento, melhorias e sacrifício. A bandeja permite escolher uma peça e depois colocá-la numa casa vazia permitida.
+- A faixa de etapas virou uma fileira compacta de abas, o código/saída reduziram e a aba do tabuleiro encosta no limite esquerdo da janela.
+- `components/Shop.tsx`: “Filtrar Melhorias” fica ligado por padrão e oculta ofertas incompatíveis. Ao desativar, as ofertas incompatíveis voltam com opacidade reduzida e as aplicáveis continuam destacadas.
+- Guia de design atualizado para 1.9. Sem alterações às regras de partida.
+
+**Verificações:** revisão estática e `git diff --check`. Testes e typecheck não executados conforme pedido anterior.
+
+## 27. Revisão visual da loja e correções de interação — 29/09/2026
+
+Pedido atual: reformular a loja com foco no acabamento, corrigir o zoom/raridades, melhorar a aba expandida, separar seleção de reposicionamento e acrescentar Vida/Tempo com feitiços automáticos. Esta etapa teve autorização expressa para verificar bugs.
+
+### Design e interface
+
+- `app/globals.css`: reorganizada a seção de preparação, substituindo os estilos anteriores do painel lateral. Loja aberta sobre fundo preto, títulos e regras legíveis, fileira de cinco cartas, saldo junto ao título e ficha do jogador em grafite. O trilho permanece no limite esquerdo da janela, com espaço reservado para não cobrir a primeira carta.
+- Raridades passaram a usar tokens compartilhados em todos os elementos com `data-rarity`. Corrigida a divergência entre carta, selo do tabuleiro e selo do retrato: prata, azul, dourado e âmbar. Compatibilidade mantém a cor original da carta.
+- `components/PieceInspector.tsx`: retrato maior sobre uma casa em perspectiva, nome/coordenada, selos verticais com reflexo suave e lista legível de melhorias. Removidas informações repetidas sobre classe. Ações junto ao tabuleiro; troca de peça numa seção recolhível para preservar a função sem repetir toda a bandeja.
+- `components/GameApp.tsx`: painel expandido com cabeçalho, botão próprio para recolher, adversário, tabuleiro, jogador e recrutamento. Indica quando o orçamento de material está completo. Painel fechado fica inerte; clicar fora também recolhe. No celular as ações são empilhadas e a revisão permanece no painel do jogador.
+- `components/Shop.tsx`: compatibilidade entre parênteses, feitiços com ativação automática, preço no botão, paginação sem estado “1 de 0” e retorno ao começo da fileira quando a seleção/filtro muda. Compras que ultrapassam Poder agora são desabilitadas com motivo explícito. A validação final continua no servidor.
+
+### Interações e regras
+
+- `components/Board.tsx` / `GameApp.tsx`: clique seleciona/desmarca; na preparação, clicar em casa vazia não reposiciona a seleção. Arraste usa Pointer Events, limiar de movimento, captura do ponteiro, imagem acompanhando o cursor, indicação do destino e supressão do clique residual. Casas ocupadas são bloqueadas e a formação continua validada pelo servidor. Espaço/setas/Enter oferecem alternativa de teclado; Escape cancela essa operação.
+- `lib/catalog.ts`: tempo base alterado para cinco minutos, Vida inicial 1.200 e regras identificadas como `workshop-0.3.0`. Corrigidas descrições que ainda mencionavam movimento de cavalo ou ataques da dama em melhorias agora permitidas para classes inteiras.
+- `lib/player-stats.ts`, `lib/types.ts` e `server/ChessRoom.ts`: atributos iniciais derivados das compras validadas e enviados no estado da sala. Instante extra acrescenta 30 segundos automaticamente na transição para a revelação, sem consumir lance; o painel já mostra 05:30 na preparação. Feitiços resolvidos saem do inventário ativo e reconectar não reaplica o efeito. O antigo comando manual é rejeitado.
+- Vida ainda é apenas o atributo inicial: não foram inventadas regras de dano nem alteradas as condições de vitória. Novos feitiços exigem resolução automática explícita antes de entrar no catálogo.
+- `README.md`, `docs/regras-prototipo.md` e guia de design 2.0 atualizados. As anotações originais em `nextmoves.md` foram preservadas.
+
+### Verificações
+
+- Verificação de tipos e `git diff --check`: sem erros.
+- O teste de atualização da loja tinha uma expectativa aleatória incorreta: comparava as ofertas novas com a loja inicial, mesmo após uma compra repor um dos espaços. Corrigido para comparar com as ofertas visíveis imediatamente antes da atualização. A execução seguinte passou.
+- 19 testes automatizados aprovados, incluindo regras clássicas, orçamento, preparação avançada, habilidades, relógio e dois clientes reais conectados ao servidor local. O teste online foi atualizado para conferir Vida/Tempo, bônus automático de 30 segundos na revelação, rejeição da ativação manual e reconexão sem duplicação do bônus.
+- Inspeção no navegador em 1440 × 960, 768 × 1024 e 390 × 844: cartas, ficha e painel expandido. Conferidos clique sem movimento, desmarcação, arraste nas duas orientações, bloqueio de destino ocupado, alternativa de teclado, filtro/transparência, compra/remoção e tempo 05:30 após comprar o feitiço. Conferido bloqueio visual de compra acima de 50 Poder.
+- Cor computada `#f2d789` conferida simultaneamente em carta rara, selo do tabuleiro e retrato; azul de melhoria incomum conferido no retrato da peça preta. Nenhum erro de console na sessão final.
+- A verificação de celular foi feita por largura de viewport e interação com ponteiro; não substitui teste físico em tela de toque. Build de produção não executado nesta revisão.
+
+### Ajuste solicitado durante a revisão
+
+Removidos o título “Seu exército” e a instrução “Clique para selecionar. Arraste para reposicionar.” do painel expandido. O botão de recolher foi para o trilho lateral. O tabuleiro subiu e sua largura agora considera a altura disponível da janela, reservando espaço para os jogadores e a bandeja de peças sem exigir rolagem em janelas usuais. As instruções de teclado permanecem acessíveis aos leitores de tela.
+
+As cartas também foram alargadas para uma referência de 250 px, com menos altura e espaçamento vertical. Categoria e raridade compartilham a mesma linha quando couberem. As cinco ofertas permanecem disponíveis em uma fileira com rolagem e navegação, que aparece apenas quando necessária.
+
+
+## 28. Bandeja única de compra/troca e aplicação direta de cartas — 29/09/2026
+
+- Removida a seção “Trocar peça” do inspetor e seus controles duplicados. `components/RecruitmentTray.tsx` concentra as cinco peças compráveis abaixo do tabuleiro. Primeiro se seleciona a casa; clicar numa peça da bandeja compra para uma casa vazia ou substitui a ocupante. Sem casa selecionada, os botões orientam a seleção e ficam desabilitados. O Rei continua protegido; a opção correspondente à peça atual fica marcada como “Atual”.
+- Os preços exibidos são líquidos: o valor da peça e de suas melhorias entra no reembolso da troca. Crédito aparece como `+N ◉`; custo zero aparece como “Grátis”. O texto da bandeja identifica a casa e explica o reembolso. Limites e saldo usam uma prévia da mesma função pura de validação do servidor; a compra só altera o estado após resposta autoritativa.
+- Cartas: peça selecionada → botão Equipar/Trocar continua imediato. Carta sem alvo → abre o tabuleiro, mostra nome/custo e destaca apenas peças onde a compra é válida. Clicar no alvo aplica diretamente, sem voltar à carta para repetir a confirmação. A aba fica aberta durante essa escolha; Cancelar, Escape, recolher ou clicar fora encerram a intenção. Compras pendentes bloqueiam duplo envio.
+- Durante aplicação de carta, a bandeja de recrutamento fica temporariamente oculta e reposicionamento/ações do inspetor ficam indisponíveis, para evitar comandos concorrentes. A loja ganhou “Escolher peça” / “Trocar alvo” no contexto da seleção. Regras, preços do catálogo e validação final do servidor permanecem vigentes.
+- Documentação atualizada; não foram adicionados nem executados testes automatizados nesta etapa. Inspeção visual da bandeja e revisão de código feitas durante a alteração.
