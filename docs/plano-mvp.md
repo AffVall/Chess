@@ -4,6 +4,27 @@
 **Nome do projeto:** provisório  
 **Data:** 27 de setembro de 2026
 
+## Índice
+
+- [Resumo executivo](#resumo-executivo)
+- [1. Visão geral e pilares](#1-visão-geral-e-pilares)
+- [2. Regras definidas e decisões pendentes](#2-regras-definidas-e-decisões-pendentes)
+- [3. Fluxo de preparação e partida](#3-fluxo-de-preparação-e-partida)
+- [4. Orçamento, sacrifícios, habilidades e economia](#4-orçamento-sacrifícios-habilidades-e-economia)
+- [5. Posição inicial: opções](#5-posição-inicial-opções)
+- [6. Vitória, empate, abandono e desconexão](#6-vitória-empate-abandono-e-desconexão)
+- [7. Arquitetura técnica e custos](#7-arquitetura-técnica-e-custos)
+- [8. Modelo inicial de dados](#8-modelo-inicial-de-dados)
+- [9. Estrutura de telas](#9-estrutura-de-telas)
+- [10. Segurança e prevenção básica contra trapaças](#10-segurança-e-prevenção-básica-contra-trapaças)
+- [11. Matchmaking e ranking](#11-matchmaking-e-ranking)
+- [12. Plano de balanceamento](#12-plano-de-balanceamento)
+- [13. Escopo do MVP e itens adiados](#13-escopo-do-mvp-e-itens-adiados)
+- [14. Roadmap por fases](#14-roadmap-por-fases)
+- [15. Critérios de aceite do MVP](#15-critérios-de-aceite-do-mvp)
+- [Aprovações solicitadas antes de implementar](#aprovações-solicitadas-antes-de-implementar)
+- [Referências técnicas oficiais](#referências-técnicas-oficiais)
+
 ## Resumo executivo
 
 Um jogo de estratégia para navegador que mantém o tabuleiro, o objetivo e a leitura do xadrez tradicional, mas permite montar um exército e equipar algumas habilidades antes da partida. O servidor valida a preparação, cada jogada e o resultado. O primeiro lançamento concentra-se em partidas entre pessoas, com interface responsiva, salas privadas e um modo ranqueado com catálogo e regras fixos.

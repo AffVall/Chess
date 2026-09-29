@@ -3,7 +3,36 @@
 **Projeto:** Gambito, nome provisório.  
 **Versão deste documento:** 2.0 · 29/09/2026.
 **Entrega:** direção visual e de interação revisada a partir do protótipo.
-**Estado:** D1–D7 estão implementadas em código. A revisão 1.4 empilha os selos das peças e acrescenta moldura metálica e reflexo lento. As revisões 1.5 e 1.6 reorganizam a hierarquia das cartas, compartilham o ícone de arma, mantêm dicas contextuais estáveis e permitem desmarcar a peça selecionada. A revisão 1.7 coloca o tabuleiro numa aba lateral sobre a loja, com expansão sob o cursor. A revisão 1.8 segue o esboço: loja à esquerda, painel do jogador à direita, dinheiro destacado e aba do tabuleiro sobre a área da loja. A revisão 1.9 acrescenta miniatura ampliada da peça selecionada com seus selos, ações de planejamento junto ao tabuleiro expandido e filtro de ofertas compatíveis. A revisão 2.0 refina loja, retrato e painel expandido, unifica raridades e acrescenta Vida/Tempo e feitiços automáticos. Cosméticos continuam adiados.
+**Estado:** D1–D7 estão implementadas em código.
+
+- A revisão 1.4 empilha os selos das peças e acrescenta moldura metálica e reflexo lento.
+- As revisões 1.5 e 1.6 reorganizam a hierarquia das cartas, compartilham o ícone de arma, mantêm dicas contextuais estáveis e permitem desmarcar a peça selecionada.
+- A revisão 1.7 coloca o tabuleiro numa aba lateral sobre a loja, com expansão sob o cursor.
+- A revisão 1.8 segue o esboço: loja à esquerda, painel do jogador à direita, dinheiro destacado e aba do tabuleiro sobre a área da loja.
+- A revisão 1.9 acrescenta miniatura ampliada da peça selecionada com seus selos, ações de planejamento junto ao tabuleiro expandido e filtro de ofertas compatíveis.
+- A revisão 2.0 refina loja, retrato e painel expandido, unifica raridades e acrescenta Vida/Tempo e feitiços automáticos.
+- Cosméticos continuam adiados.
+
+## Índice
+
+1. [Como usar este documento](#1-como-usar-este-documento)
+2. [Conceito artístico](#2-conceito-artístico)
+3. [O que veio do usuário e o que precisa de regra](#3-o-que-veio-do-usuário-e-o-que-precisa-de-regra)
+4. [Sistema visual](#4-sistema-visual)
+5. [Tabuleiro e peças](#5-tabuleiro-e-peças)
+6. [Preparação, pontuação e posicionamento](#6-preparação-pontuação-e-posicionamento)
+7. [Cartas e mercado](#7-cartas-e-mercado)
+8. [Telas e layouts](#8-telas-e-layouts)
+9. [Movimento e animações](#9-movimento-e-animações)
+10. [Cosméticos futuros](#10-cosméticos-futuros)
+11. [Acessibilidade e interação](#11-acessibilidade-e-interação)
+12. [Inventário de componentes e assets](#12-inventário-de-componentes-e-assets)
+13. [Implementação e próximas etapas](#13-implementação-e-próximas-etapas)
+14. [Decisões ainda em aberto](#14-decisões-ainda-em-aberto)
+15. [Hierarquia e leitura das cartas de melhoria](#15-hierarquia-e-leitura-das-cartas-de-melhoria)
+16. [Preparação com loja e painel do jogador](#16-preparação-com-loja-e-painel-do-jogador)
+17. [Revisão da loja, retrato e planejamento — versão 2.0](#17-revisão-da-loja-retrato-e-planejamento--versão-20)
+18. [Referências e registro desta entrega](#18-referências-e-registro-desta-entrega)
 
 ## 1. Como usar este documento
 
@@ -16,6 +45,7 @@ Ordem de referência:
 3. [nextmoves.md](nextmoves.md): anotações originais do usuário sobre pontuação, classes, raridades e loja; decisões abertas e desvios do MVP estão identificados abaixo.
 4. [regras-prototipo.md](regras-prototipo.md): regras que o servidor executa no protótipo 0.3.0.
 5. [implementacao.md](implementacao.md): histórico e limites do trabalho realizado.
+6. [historico.md](historico.md): registro cronológico do trabalho, etapa a etapa (seções 11–28).
 
 **Distinção essencial para executar:** há um redesenho aplicável ao jogo atual e há interfaces previstas para regras futuras. Só mostrar comandos, valores, raridades e efeitos reais que o servidor consegue fornecer e validar. Não simular funcionalidades futuras dentro da partida para fazer a tela parecer completa.
 
@@ -652,7 +682,7 @@ P1–P4 refinam a interface atual e não dependem da nova economia. Implementar 
 - P3: seleção compacta; `PieceInspector` em painel inferior sob demanda no celular; confirmação de sacrifício dentro da ficha; faixa de alvo/ouro no mercado, navegação anterior/próxima e revisão fixa com área segura. A ficha da peça e o histórico durante a partida permanecem no fluxo abaixo do tabuleiro, sem painel automático.
 - P4: portal escalonado e pedestal em patamares, formulário antes da cena compacta no celular e entradas com duração total de até 700 ms. Movimento reduzido elimina as animações; redimensionamento e mudança de visibilidade cancelam deslocamentos ativos.
 
-A conexão foi revisada separadamente: inicialização conjunta em desenvolvimento/produção, porta configurável, arquivos de ambiente alinhados, origens locais em desenvolvimento, consulta de disponibilidade e nova tentativa. Os detalhes estão em `implementacao.md`. As regras nextmoves foram adicionadas depois das verificações anteriores. Esta etapa não executou testes, typecheck, build ou inspeção no navegador; responsividade da nova loja segue pendente.
+A conexão foi revisada separadamente: inicialização conjunta em desenvolvimento/produção, porta configurável, arquivos de ambiente alinhados, origens locais em desenvolvimento, consulta de disponibilidade e nova tentativa. Os detalhes estão em [`historico.md`](historico.md). As regras nextmoves foram adicionadas depois das verificações anteriores. Esta etapa não executou testes, typecheck, build ou inspeção no navegador; responsividade da nova loja segue pendente.
 
 ### Critérios de aceite visual para usar quando a verificação for retomada
 
@@ -689,18 +719,8 @@ As regras-base de `nextmoves.md` estão implementadas com as interpretações re
 
 O efeito vertical sem diferença do xadrez tradicional e o Feitiço de aumento do limite de peças sem parâmetros foram deixados fora do catálogo e descritos na seção 3.2.
 
-## 15. Referências e registro desta entrega
 
-- Brief principal: pedido de design do usuário e [nextmoves.md](nextmoves.md), lido em 27/09/2026, incluindo a seção de feitiços e os exemplos ainda incompletos.
-- Base real consultada: `components/GameApp.tsx`, `components/Board.tsx`, `components/Piece.tsx`, `app/globals.css`, `lib/types.ts`, `lib/draft.ts`, README e documentação existente.
-- Skill instalada: [frontend-design, repositório público da Anthropic](https://github.com/anthropics/skills/tree/main/skills/frontend-design), através da skill `skill-installer`, em 27/09/2026. Caminho local: `/home/valeria/.codex/skills/frontend-design/SKILL.md`.
-- Registro da cópia lida: SHA-256 `d91970639e9f5c37682ac7ab60094d35f1c7c1f38d731bd56396563aee10c1d3`. A instalação usou a referência `main`; esse hash identifica o conteúdo consultado nesta entrega.
-- Aplicação da skill: direção específica ao xadrez, hierarquia tipográfica, composição deliberada, protagonismo visual concentrado e movimento com propósito.
-- Este documento foi originalmente produzido antes de alterar a interface. A aplicação posterior de D1–D6 e seus limites está registrada em [implementacao.md](implementacao.md). Os detalhes de peça são SVG/CSS; não foram adicionados imagens raster nem áudio.
-- Revisão 1.2 em 28/09/2026: aplicado `nextmoves.md` ao catálogo, servidor, montagem, motor, interface e animações; regras executáveis registradas em `regras-prototipo.md`. Esta etapa não rodou testes, typecheck, build nem inspeção visual.
-
-
-## 22. Hierarquia e leitura das cartas de melhoria
+## 15. Hierarquia e leitura das cartas de melhoria
 
 As cartas devem priorizar nome, tipo, raridade e regra. O nome fica no topo em destaque; abaixo, o tipo aparece com ícone e rótulo de pelo menos 15 px, acompanhado da raridade. Armas usam espada, Encantamentos usam estrela e Feitiços usam varinha com brilho. A classe compatível usa selo curto: **Plebeu** para peão, cavalo e bispo; **Realeza** para torre e dama. O texto da carta explica seu efeito específico.
 
@@ -712,7 +732,7 @@ O preço aparece apenas no botão de compra/equipamento. Não duplicar custo, al
 Ao selecionar uma peça no tabuleiro, tocar/clicar nela novamente limpa a seleção. Durante a preparação, se o jogador tiver iniciado uma escolha de melhoria, o segundo clique na peça conclui a escolha em vez de desmarcá-la.
 
 
-## 23. Preparação com loja e painel do jogador
+## 16. Preparação com loja e painel do jogador
 
 A tela segue o esboço aprovado: o cabeçalho do Gambito permanece no topo; abaixo, a etapa da partida divide uma faixa com o código da sala e “Sair da sala”, alinhados na mesma linha. A área de trabalho tem duas colunas: a loja ocupa a coluna larga à esquerda e mostra cinco cartas em uma fileira; “Atualizar loja” fica abaixo das cartas. O painel “Informações do jogador” permanece visível à direita com Material, Poder total, detalhes da peça selecionada e “Revisar exército”. O saldo aparece centralizado sobre a loja como “Dinheiro”.
 
@@ -723,7 +743,7 @@ A faixa “Montagem · Revelação · Partida” é uma navegação curta de aba
 Em telas sensíveis ao toque, a aba abre/fecha por toque e fecha ao tocar fora. Em telas estreitas, loja e informações do jogador passam a ocupar uma coluna; a aba pode ocupar quase toda a largura para manter o tabuleiro legível, e as cartas voltam ao carrossel horizontal.
 
 
-## 24. Revisão da loja, retrato e planejamento — versão 2.0
+## 17. Revisão da loja, retrato e planejamento — versão 2.0
 
 Esta seção substitui os detalhes conflitantes das revisões anteriores.
 
@@ -738,3 +758,13 @@ Esta seção substitui os detalhes conflitantes das revisões anteriores.
 - **Responsividade e movimento:** reservar espaço para o trilho, rolar apenas as cartas horizontalmente e deixar a revisão dentro da ficha. Manter entrada e aura discreta das raridades existentes, respeitando movimento reduzido.
 
 **Limite de regra:** Vida é atributo inicial, sem mecânica de dano definida. O único feitiço atual é Instante extra; novos feitiços precisam ter sua resolução automática definida no servidor antes de entrar no catálogo.
+
+## 18. Referências e registro desta entrega
+
+- Brief principal: pedido de design do usuário e [nextmoves.md](nextmoves.md), lido em 27/09/2026, incluindo a seção de feitiços e os exemplos ainda incompletos.
+- Base real consultada: `components/GameApp.tsx`, `components/Board.tsx`, `components/Piece.tsx`, `app/globals.css`, `lib/types.ts`, `lib/draft.ts`, README e documentação existente.
+- Skill instalada: [frontend-design, repositório público da Anthropic](https://github.com/anthropics/skills/tree/main/skills/frontend-design), através da skill `skill-installer`, em 27/09/2026. Caminho local: `/home/valeria/.codex/skills/frontend-design/SKILL.md`.
+- Registro da cópia lida: SHA-256 `d91970639e9f5c37682ac7ab60094d35f1c7c1f38d731bd56396563aee10c1d3`. A instalação usou a referência `main`; esse hash identifica o conteúdo consultado nesta entrega.
+- Aplicação da skill: direção específica ao xadrez, hierarquia tipográfica, composição deliberada, protagonismo visual concentrado e movimento com propósito.
+- Este documento foi originalmente produzido antes de alterar a interface. A aplicação posterior de D1–D6 e seus limites está registrada em [historico.md](historico.md) e [implementacao.md](implementacao.md). Os detalhes de peça são SVG/CSS; não foram adicionados imagens raster nem áudio.
+- Revisão 1.2 em 28/09/2026: aplicado `nextmoves.md` ao catálogo, servidor, montagem, motor, interface e animações; regras executáveis registradas em `regras-prototipo.md`. Esta etapa não rodou testes, typecheck, build nem inspeção visual.

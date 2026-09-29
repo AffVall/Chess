@@ -3,13 +3,36 @@
 
 Primeira etapa jogável de um xadrez online com montagem de exércitos e loja aleatória de melhorias. Interface em português, responsiva, com partidas únicas de 5 minutos por jogador, sem acréscimo.
 
-**Andamento:** protótipo local com preparação avançada, cinco ofertas, classes de peças, armas, encantamentos, feitiços, quatro raridades e validação autoritativa no servidor. A direção visual de [design-do-jogo.md](docs/design-do-jogo.md) está aplicada. Esta versão continua sem conta, saldo persistente, ranking, recompensas pós-partida, PostgreSQL ou cosméticos. A revisão da loja inclui inspeção visual em desktop/celular, verificação de tipos e 19 testes automatizados aprovados; detalhes em `docs/implementacao.md`.
+**Andamento:** protótipo local com preparação avançada, cinco ofertas, classes de peças, armas, encantamentos, feitiços, quatro raridades e validação autoritativa no servidor.
+
+- A direção visual de [design-do-jogo.md](docs/design-do-jogo.md) está aplicada.
+- Esta versão continua sem conta, saldo persistente, ranking, recompensas pós-partida, PostgreSQL ou cosméticos.
+- A revisão da loja inclui inspeção visual em desktop/celular, verificação de tipos e 19 testes automatizados aprovados; detalhes em `docs/implementacao.md`.
+
+## Índice
+
+- [Documentação do projeto](#documentação-do-projeto)
+- [O que já funciona](#o-que-já-funciona)
+- [Executar](#executar)
+  - [Requisitos](#requisitos)
+  - [Primeira execução](#primeira-execução)
+  - [Reiniciar após alterações](#reiniciar-após-alterações)
+  - [A loja da preparação](#a-loja-da-preparação)
+  - [Produção e variáveis de ambiente](#produção-e-variáveis-de-ambiente)
+  - [Erros de conexão](#erros-de-conexão)
+  - [Node 24 desta máquina](#node-24-desta-máquina)
+  - [Testar em celular ou na mesma rede](#testar-em-celular-ou-na-mesma-rede)
+- [Roteiro manual de preparação](#roteiro-manual-de-preparação)
+- [Comandos de verificação](#comandos-de-verificação)
+- [Organização](#organização)
+- [Etapas posteriores — ainda não iniciadas](#etapas-posteriores--ainda-não-iniciadas)
 
 ## Documentação do projeto
 
 - [Direção de design do jogo](docs/design-do-jogo.md): especificação visual de referência para tabuleiro preto/branco, peças, telas, cartas, animações e cosméticos futuros. Aplicada à interface atual; cosméticos continuam adiados.
 - [Próximas regras desejadas](docs/nextmoves.md): anotações originais do usuário. As decisões aplicadas e as regras que não entraram no catálogo estão documentadas em [regras atuais](docs/regras-prototipo.md).
 - [Registro da implementação](docs/implementacao.md): o que foi feito, arquivos criados, decisões provisórias, arquitetura atual, histórico de verificações e pendências.
+- [Histórico cronológico](docs/historico.md): registro etapa a etapa do trabalho, de 27/09 a 29/09/2026 (seções 11–28).
 - [Regras atuais](docs/regras-prototipo.md): economia temporária, loja, habilidades, sacrifícios, relógio e condições de encerramento.
 - [Proposta inicial](docs/plano-mvp.md): os 15 entregáveis de planejamento, preservados como histórico; recomendações conflitantes foram substituídas pelas regras atuais.
 
@@ -33,7 +56,11 @@ A documentação distingue decisões expressas do usuário de parâmetros escolh
 
 ## Executar
 
+### Requisitos
+
 Requisitos: **Node.js 22 ou superior** (24 recomendado) e npm.
+
+### Primeira execução
 
 ```sh
 npm ci
@@ -42,17 +69,31 @@ npm run dev
 
 Abra [http://localhost:3000](http://localhost:3000). O comando inicia tanto a interface quanto o servidor de partidas (porta 2567). `Ctrl+C` encerra ambos. Opções adicionais podem ser colocadas em `.env`, a partir de `.env.example`.
 
-Após alterações no inicializador ou na configuração do servidor, encerre a execução anterior e inicie novamente com `npm run dev`. Abrir apenas `npm run dev:web` deixa a loja sem conexão, a menos que `npm run dev:server` esteja ativo em outro terminal. A loja faz parte da preparação: informe um apelido, entre em casual ou crie uma sala com amigo e use **Ir para a loja** abaixo do tabuleiro. Não é preciso esperar outro jogador para preparar o exército.
+### Reiniciar após alterações
+
+Após alterações no inicializador ou na configuração do servidor, encerre a execução anterior e inicie novamente com `npm run dev`. Abrir apenas `npm run dev:web` deixa a loja sem conexão, a menos que `npm run dev:server` esteja ativo em outro terminal.
+
+### A loja da preparação
+
+A loja faz parte da preparação: informe um apelido, entre em casual ou crie uma sala com amigo e use **Ir para a loja** abaixo do tabuleiro. Não é preciso esperar outro jogador para preparar o exército.
+
+### Produção e variáveis de ambiente
 
 `npm start` agora inicia os dois serviços em produção, após uma compilação existente. `npm run start:web` e `npm run start:server` são as opções separadas para hospedagem. O inicializador fixa a porta web (`PORT`, padrão 3000) e encerra os serviços juntos; não abre silenciosamente a interface numa porta alternativa. A porta de partidas vem de `GAME_PORT`, também transmitida à página durante a requisição. `NEXT_PUBLIC_GAME_SERVER_URL` prevalece para um servidor em outro endereço e precisa ser configurado antes da compilação.
 
+### Erros de conexão
+
 Se aparecer um erro de conexão, a interface oferece **Tentar novamente**. Ela consulta `/health` antes de criar a sala e preserva o convite de reconexão em falhas de rede. A resposta de saúde confirma apenas a disponibilidade HTTP; a entrada na sala ainda depende da conexão WebSocket. O servidor deve ser reiniciado junto com esta atualização para fornecer a resposta de saúde e a confirmação de alterações da preparação. Em produção, configure `ALLOWED_ORIGINS` com a origem pública exata e disponibilize HTTPS/WSS.
+
+### Node 24 desta máquina
 
 Neste computador, o Node padrão do sistema é 18. A execução feita pelo Codex usa o Node 24 já disponível no ambiente:
 
 ```sh
 PATH=/home/valeria/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin:$PATH npm run dev
 ```
+
+### Testar em celular ou na mesma rede
 
 Para conferir no celular na mesma rede, abra `http://IP-DO-COMPUTADOR:3000` e mantenha as portas web/partidas acessíveis na rede local. Em desenvolvimento, localhost e endereços privados de rede são aceitos; em produção, as origens precisam estar em `ALLOWED_ORIGINS`. O cliente usa automaticamente o mesmo nome de host para o servidor. Para hosts distintos, defina `NEXT_PUBLIC_GAME_SERVER_URL` antes de compilar a interface.
 
@@ -66,7 +107,7 @@ Para conferir no celular na mesma rede, abra `http://IP-DO-COMPUTADOR:3000` e ma
 6. Mova peças por clique/toque. Apenas o jogador da vez pode jogar; o relógio não ganha segundos após um lance. Consulte habilidades e tente resolver Isca se ela for ativada.
 7. Recarregue uma aba durante a partida: deve recuperar a sala e o estado. O relógio continua. Proponha e aceite empate, ou desista. Uma nova sala começa com 39 pontos e 12 moedas.
 
-Os relógios base dão até cerca de 10 minutos por partida, somados os dois lados, além dos bônus comprados. A preparação tem um limite de 20 minutos neste protótipo para evitar salas esquecidas; esse limite não representa a duração casual pretendida e será ajustado com o uso. As verificações feitas em etapas anteriores estão registradas em [implementacao.md](docs/implementacao.md), incluindo a revisão da loja e os testes mais recentes.
+Os relógios base dão até cerca de 10 minutos por partida, somados os dois lados, além dos bônus comprados. A preparação tem um limite de 20 minutos neste protótipo para evitar salas esquecidas; esse limite não representa a duração casual pretendida e será ajustado com o uso. As verificações feitas em etapas anteriores estão registradas em [implementacao.md](docs/implementacao.md) e [historico.md](docs/historico.md), incluindo a revisão da loja e os testes mais recentes.
 
 ## Comandos de verificação
 
