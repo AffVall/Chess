@@ -1,9 +1,9 @@
 import { randomBytes, randomInt } from 'node:crypto';
 import { Room, ServerError, type Client } from '@colyseus/core';
 import { z } from 'zod';
-import { generateShop, RECONNECT_SECONDS, RULESET, type Color } from '../lib/catalog';
-import { applyDraftAction, createDraft, other, validateDraft } from '../lib/draft';
-import { canClaimDraw, createGame, describeMove, gameResult, insufficientMaterial, legalMoves, makeMove } from '../lib/chess';
+import { ABILITIES, abilityById, generateShop, replacementOffer, RECONNECT_SECONDS, RULESET, type Color } from '../lib/catalog';
+import { applyDraftAction, createDraft, nextRefreshCost, other, validateDraft } from '../lib/draft';
+import { canClaimDraw, createGame, describeMove, gameResult, insufficientMaterial, legalMoves, legalSpellMoves, makeMove, positionKey } from '../lib/chess';
 import { MatchClock } from '../lib/clock';
 import type { Draft, Game, Move, Phase, PlayerView, Result, Snapshot } from '../lib/types';
 
@@ -12,11 +12,14 @@ const joinSchema = z.object({ name: z.string().trim().min(1).max(24) });
 const actionSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('recruit'), square, kind: z.enum(['p', 'n', 'b', 'r', 'q']) }).strict(),
   z.object({ type: z.literal('sacrifice'), square }).strict(),
+  z.object({ type: z.literal('movePiece'), from: square, to: square }).strict(),
   z.object({ type: z.literal('equip'), square, ability: z.string().max(32) }).strict(),
-  z.object({ type: z.literal('unequip'), square }).strict(),
+  z.object({ type: z.literal('buySpell'), ability: z.string().max(32) }).strict(),
+  z.object({ type: z.literal('unequip'), square, slot: z.enum(['weapon', 'enchantment']) }).strict(),
 ]);
 const moveSchema = z.object({ from: square, to: square, promotion: z.enum(['q', 'r', 'b', 'n']).optional(), ply: z.number().int().min(0) }).strict();
-interface Player extends PlayerView { sessionId: string; draft: Draft }
+const baitSchema = z.object({ ability: z.string().max(32), square }).strict();
+interface Player extends PlayerView { sessionId: string; draft: Draft; shop: string[] }
 
 export class ChessRoom extends Room {
   maxClients = 2;
@@ -33,6 +36,7 @@ export class ChessRoom extends Room {
   private revealUntil: number | null = null;
   private drawOfferedBy: Color | null = null;
   private lastDrawOffers: Record<Color, number> = { w: -10, b: -10 };
+  private pendingBait: { owner: Color; choices: string[] } | null = null;
 
   async onCreate() {
     this.roomId = randomBytes(4).toString('hex').toUpperCase();
@@ -44,7 +48,26 @@ export class ChessRoom extends Room {
     this.onMessage('draft', (client, input: unknown) => {
       this.guard(client, player => {
         if (this.phase !== 'preparation') throw new Error('A preparação desta partida já terminou.');
-        player.draft = applyDraftAction(player.draft, player.color, this.shop, actionSchema.parse(input));
+        const action = actionSchema.parse(input);
+        player.draft = applyDraftAction(player.draft, player.color, player.shop, action);
+        if (action.type === 'equip' || action.type === 'buySpell') {
+          const slot = player.shop.indexOf(action.ability);
+          if (slot >= 0) player.shop[slot] = replacementOffer([...player.shop, ...player.draft.spells], () => randomInt(0, 1_000_000) / 1_000_000);
+        }
+        this.publish();
+      });
+      client.send('draftComplete');
+    });
+    this.onMessage('refreshShop', client => {
+      this.guard(client, player => {
+        if (this.phase !== 'preparation') throw new Error('A loja só pode ser atualizada durante a preparação.');
+        if (player.draft.ready) throw new Error('Cancele a confirmação para editar o exército.');
+        const cost = nextRefreshCost(player.draft);
+        if (player.draft.gold < cost) throw new Error(`São necessárias ${cost} moedas para atualizar a loja.`);
+        player.draft.gold -= cost;
+        player.draft.shopRefreshes++;
+        player.shop = generateShop(() => randomInt(0, 1_000_000) / 1_000_000, [...player.shop, ...player.draft.spells]);
+        validateDraft(player.draft, player.color, player.shop);
         this.publish();
       });
       client.send('draftComplete');
@@ -59,16 +82,54 @@ export class ChessRoom extends Room {
     }));
     this.onMessage('move', (client, value: unknown) => this.guard(client, player => {
       if (!this.active()) return;
+      if (this.pendingBait) throw new Error('Resolva a escolha de Isca antes do próximo lance.');
       const action = moveSchema.parse(value);
       if (player.color !== this.game!.turn) throw new Error('Aguarde a sua vez.');
       if (action.ply !== this.game!.ply) throw new Error('Esta jogada pertence a uma posição anterior.');
+      const capturedAt = action.from === action.to ? null : this.game!.board[action.to] ? action.to : this.game!.board[action.from]?.kind === 'p' && action.to === this.game!.enPassant ? action.to - (player.color === 'w' ? 8 : -8) : null;
+      const baitOwner = capturedAt !== null && this.game!.board[capturedAt]?.enchantment === 'bait' ? this.game!.board[capturedAt]!.color : null;
       const next = makeMove(this.game!, action.from, action.to, action.promotion);
+      const activatedBait = baitOwner !== null && !next.lastMove?.defended;
       this.history.push(describeMove(this.game!, next));
       this.game = next;
+      if (activatedBait) {
+        const choices = this.baitChoices(baitOwner!);
+        if (choices.length) this.pendingBait = { owner: baitOwner!, choices };
+      }
       this.drawOfferedBy = null;
       this.timer.changeTurn(next.turn, performance.now());
       this.availableMoves = legalMoves(next);
       const result = gameResult(next);
+      if (result && this.pendingBait) this.publish();
+      else if (result) this.finish(result);
+      else this.publish();
+    }));
+    this.onMessage('useSpell', (client, value: unknown) => this.guard(client, player => {
+      if (!this.active()) return;
+      if (this.pendingBait) throw new Error('Resolva a escolha de Isca antes do próximo lance.');
+      if (!this.game || player.color !== this.game.turn) throw new Error('Ative o feitiço apenas no seu turno.');
+      const id = z.string().max(32).parse(value), ability = abilityById(id);
+      if (ability?.trigger !== 'time-30') throw new Error('Feitiço inválido.');
+      if (!this.game!.spells[player.color].includes(ability.id)) throw new Error('Esse feitiço já foi usado.');
+      this.timer.addTime(player.color, 30_000, performance.now());
+      this.game!.spells[player.color] = this.game!.spells[player.color].filter(id => id !== ability.id);
+      const key = positionKey(this.game!);
+      this.game!.repetitions = { [key]: 1 };
+      this.publish();
+      this.broadcast('clock', this.timer.remaining);
+    }));
+    this.onMessage('chooseBait', (client, value: unknown) => this.guard(client, player => {
+      if (!this.pendingBait || this.pendingBait.owner !== player.color || !this.game) throw new Error('Não há uma escolha de Isca para resolver.');
+      const action = baitSchema.parse(value), ability = abilityById(action.ability), piece = this.game.board[action.square];
+      if (!this.pendingBait.choices.includes(action.ability) || !piece || piece.color !== player.color || piece.kind === 'k' || !ability || !ability.classes.includes(piece.kind === 'r' || piece.kind === 'q' ? 'major' : 'minor')) throw new Error('Escolha uma melhoria compatível com uma peça sua.');
+      if (ability.type === 'weapon' && piece.weapon || ability.type === 'enchantment' && piece.enchantment || ability.type === 'spell') throw new Error('Escolha uma peça com espaço livre para esta melhoria.');
+      if (ability.type === 'weapon') piece.weapon = ability.id;
+      else { piece.enchantment = ability.id; if (ability.trigger === 'second-heart') piece.heart = true; }
+      this.pendingBait = null;
+      const key = positionKey(this.game);
+      this.game.repetitions = { [key]: 1 };
+      this.availableMoves = legalMoves(this.game);
+      const result = gameResult(this.game);
       if (result) this.finish(result);
       else this.publish();
     }));
@@ -77,6 +138,7 @@ export class ChessRoom extends Room {
     }));
     this.onMessage('offerDraw', client => this.guard(client, player => {
       if (!this.active()) return;
+      if (this.pendingBait) throw new Error('Resolva a escolha de Isca antes de propor empate.');
       if (this.drawOfferedBy || this.game!.ply - this.lastDrawOffers[player.color] < 10) throw new Error('Aguarde dez lances individuais para propor outro empate.');
       this.lastDrawOffers[player.color] = this.game!.ply;
       this.drawOfferedBy = player.color;
@@ -84,12 +146,14 @@ export class ChessRoom extends Room {
     }));
     this.onMessage('answerDraw', (client, value: unknown) => this.guard(client, player => {
       if (!this.active()) return;
+      if (this.pendingBait) throw new Error('Resolva a escolha de Isca antes de responder ao empate.');
       if (!this.drawOfferedBy || this.drawOfferedBy === player.color) throw new Error('Não há proposta do adversário.');
       if (z.boolean().parse(value)) this.finish({ winner: null, reason: 'Empate por acordo' });
       else { this.drawOfferedBy = null; this.publish(); }
     }));
     this.onMessage('claimDraw', client => this.guard(client, player => {
       if (!this.active()) return;
+      if (this.pendingBait) throw new Error('Resolva a escolha de Isca antes de reivindicar empate.');
       if (player.color !== this.game!.turn || !canClaimDraw(this.game!)) throw new Error('Esta posição ainda não permite reivindicar empate.');
       this.finish({ winner: null, reason: this.game!.halfmove >= 100 ? 'Regra dos 50 lances' : 'Repetição tripla' });
     }));
@@ -110,7 +174,7 @@ export class ChessRoom extends Room {
   onJoin(client: Client) {
     const first = [...this.players.values()][0];
     const color = first ? other(first.color) : randomInt(2) === 0 ? 'w' : 'b';
-    this.players.set(client.sessionId, { sessionId: client.sessionId, name: client.auth.name, color, connected: true, ready: false, draft: createDraft(color) });
+    this.players.set(client.sessionId, { sessionId: client.sessionId, name: client.auth.name, color, connected: true, ready: false, draft: createDraft(color), shop: [...this.shop] });
     if (this.players.size === 2) void this.lock();
     this.publish();
   }
@@ -170,6 +234,16 @@ export class ChessRoom extends Room {
     if (this.phase !== 'playing' || !this.game) throw new Error('A partida não está em andamento.');
     return this.updateClock();
   }
+  private baitChoices(color: Color): string[] {
+    const board = this.game!.board;
+    const canUse = (id: string) => {
+      const ability = abilityById(id);
+      return !!ability && ability.type !== 'spell' && board.some(piece => piece?.color === color && piece.kind !== 'k' && ability.classes.includes(piece.kind === 'r' || piece.kind === 'q' ? 'major' : 'minor') && (ability.type === 'weapon' ? !piece.weapon : !piece.enchantment));
+    };
+    const candidates = this.shop.concat(ABILITIES.map(a => a.id)).filter((id, index, list) => list.indexOf(id) === index && canUse(id));
+    for (let i = candidates.length - 1; i > 0; i--) { const j = randomInt(i + 1); [candidates[i], candidates[j]] = [candidates[j], candidates[i]]; }
+    return candidates.slice(0, 3);
+  }
   private updateClock() {
     const expired = this.timer.settle(performance.now());
     if (!expired) return true;
@@ -181,6 +255,7 @@ export class ChessRoom extends Room {
   private finish(result: Result) {
     if (this.phase === 'finished') return;
     this.phase = 'finished';
+    this.pendingBait = null;
     this.result = result;
     this.timer.stop();
     this.drawOfferedBy = null;
@@ -194,12 +269,14 @@ export class ChessRoom extends Room {
     const snapshot: Snapshot = {
       roomId: this.roomId, mode: this.mode, ruleset: RULESET, phase: this.phase, you: player.color,
       players: [...this.players.values()].map(({ name, color, connected, ready }) => ({ name, color, connected, ready })),
-      draft: player.draft, shop: this.shop,
+      draft: player.draft, shop: player.shop, refreshCost: nextRefreshCost(player.draft),
       game: this.game ? { ...this.game, repetitions: {} } : null,
       legalMoves: this.game?.turn === player.color && this.phase === 'playing' ? this.availableMoves : [],
+      spellMoves: this.game?.turn === player.color && this.phase === 'playing' ? this.game.spells[player.color].flatMap(id => legalSpellMoves(this.game!, player.color, id)) : [],
       clocks: this.timer.remaining, result: this.result, moves: this.history,
       revealUntil: this.revealUntil, drawOfferedBy: this.drawOfferedBy,
       claimableDraw: this.phase === 'playing' && this.game?.turn === player.color && canClaimDraw(this.game),
+      pendingBait: this.pendingBait?.owner === player.color ? { choices: this.pendingBait.choices } : null,
     };
     client.send('snapshot', snapshot);
   }

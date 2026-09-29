@@ -1,9 +1,9 @@
 # Direção de design — Salão de Obsidiana
 
 **Projeto:** Gambito, nome provisório.  
-**Versão deste documento:** 1.1 · 28/09/2026.
+**Versão deste documento:** 1.6 · 28/09/2026.
 **Entrega:** direção visual e de interação revisada a partir do protótipo.
-**Estado:** D1–D6 têm uma primeira implementação, com diferenças em relação à especificação. Os refinamentos P1–P4 da versão 1.1 foram aplicados ao protótipo, com limites registrados na seção 13. Regras futuras e raridades aguardam suporte do servidor. Conexão, preparação, loja e compra de melhoria foram verificadas no navegador local. Os testes automatizados e o typecheck passaram; outros tamanhos de tela ainda aguardam inspeção.
+**Estado:** D1–D7 estão implementadas em código. A revisão 1.4 empilha os selos das peças e acrescenta moldura metálica e reflexo lento. As revisões 1.5 e 1.6 reorganizam a hierarquia das cartas, compartilham o ícone de arma, mantêm dicas contextuais estáveis e permitem desmarcar a peça selecionada; não tiveram testes nem inspeção no navegador. Cosméticos continuam adiados.
 
 ## 1. Como usar este documento
 
@@ -13,8 +13,8 @@ Ordem de referência:
 
 1. Pedidos atuais do usuário: aparência grandiosa, tabuleiro preto e branco, documentação, cosméticos futuramente equipáveis e obtidos jogando; não implementar cosméticos agora; não testar por enquanto.
 2. Este documento: decisões de design e sequência da futura implementação visual.
-3. [nextmoves.md](nextmoves.md): intenção de produto para novas pontuações, classes de habilidades, raridades e loja. As anotações incompletas são identificadas abaixo; não equivalem a uma regra executável.
-4. [regras-prototipo.md](regras-prototipo.md): comportamento que realmente existe no programa.
+3. [nextmoves.md](nextmoves.md): anotações originais do usuário sobre pontuação, classes, raridades e loja; decisões abertas e desvios do MVP estão identificados abaixo.
+4. [regras-prototipo.md](regras-prototipo.md): regras que o servidor executa no protótipo 0.2.0.
 5. [implementacao.md](implementacao.md): histórico e limites do trabalho realizado.
 
 **Distinção essencial para executar:** há um redesenho aplicável ao jogo atual e há interfaces previstas para regras futuras. Só mostrar comandos, valores, raridades e efeitos reais que o servidor consegue fornecer e validar. Não simular funcionalidades futuras dentro da partida para fazer a tela parecer completa.
@@ -27,11 +27,11 @@ Ordem de referência:
 | Tabuleiro | Cinza-carvão `#373B43` e porcelana `#F5F5F3`; acabamento liso, peças com contorno e estados sobrepostos legíveis. |
 | Peças | Silhuetas clássicas, porcelana branca e obsidiana negra; SVG com relevo leve, contornos contrastantes e base legível. |
 | Tipografia | Cormorant Garamond para títulos; Manrope para interface, regras e números. |
-| Cores auxiliares | Prata como estrutura, ouro envelhecido como destaque; azul mineral para raras. |
+| Cores auxiliares | Prata como estrutura e ouro envelhecido nas ações; melhorias usam prata, azul, dourado e âmbar conforme a raridade. |
 | Tela inicial | Uma composição cênica com peças monumentais, título curto e acesso direto ao jogo. |
-| Preparação | Tabuleiro dominante, ficha persistente da seleção e compra com alvo/preço explícitos; oito ofertas atuais, cinco somente após mudança de regras. |
+| Preparação | Tabuleiro dominante, quatro fileiras próprias, pontuação de material e Poder, peças reposicionáveis, e loja de cinco ofertas com raridade/categoria visíveis. |
 | Partida | Tabuleiro frontal, relógios próximos aos jogadores, efeitos curtos e informações acessíveis por seleção. |
-| Animações | Responder à ação; raras e lendárias têm revelações próprias; nenhuma decoração animada em repetição durante a partida. |
+| Animações | Responder à ação; raras e lendárias têm revelações próprias; selos equipados têm um reflexo lento e discreto, sem deslocamento durante a partida. |
 | Personalização | Preparar separação visual entre aparência e regra. Inventário, desbloqueios e recompensas ficam adiados. |
 
 ### Revisão 1.1: decisões com maior impacto
@@ -76,7 +76,7 @@ Três intensidades do mesmo mundo:
 
 ### Revisão da direção contra o pedido
 
-A primeira proposta substituiu o verde e creme por pedra, porcelana e metal. A revisão mantém essa direção e as oito ofertas reais, mas concentra a arquitetura no portal/pedestal, reduz legendas decorativas repetidas e aproxima alvo, efeito e custo da compra. O caráter do jogo vem dos objetos de xadrez e da montagem do exército. Tipografia cerimonial e dourado apoiam essa identidade sem dominar os controles.
+A primeira proposta substituiu o verde e creme por pedra, porcelana e metal. A revisão concentra a arquitetura no portal/pedestal, reduz legendas decorativas repetidas e aproxima alvo, efeito e custo da compra. O caráter do jogo vem dos objetos de xadrez e da montagem do exército. Tipografia cerimonial e dourado apoiam essa identidade sem dominar os controles.
 
 ## 3. O que veio do usuário e o que precisa de regra
 
@@ -84,41 +84,40 @@ A primeira proposta substituiu o verde e creme por pedra, porcelana e metal. A r
 
 - Peões podem receber melhorias e ser sacrificados.
 - A preparação dispõe de dinheiro; a loja é aleatória e deve oferecer variedade.
-- Material tem limite de 39 pontos. Há uma segunda pontuação combinando material e gasto em melhorias; **50 é um teto sugerido pelo usuário, ainda provisório**.
+- Material tem limite de 39 pontos. A versão de MVP usa Poder total com teto 50, combinando material, custo de melhorias e avanço.
 - Peças podem ocupar a terceira e a quarta fileiras a partir do próprio lado, com custo de 2 pontos de habilidade por peça nessas fileiras.
 - Habilidades terão compatibilidade por grupos, tipos e raridades.
 - Tipos citados: **Arma**, **Encantamento** e **Feitiço**.
 - Raridades: **Comum**, **Incomum**, **Raro**, **Lendário**. Raras e lendárias precisam de animação especial.
-- A nova loja tem **cinco ofertas**, misturando armas e encantamentos; comprar substitui a oferta daquele espaço. Atualizar a loja começa custando 1 e encarece.
+- A loja tem **cinco ofertas**; comprar substitui aquela posição para quem comprou. Atualizar a loja começa custando 1 e encarece a cada tentativa.
 - Partidas únicas de 10 minutos por jogador, sem incremento. Melhor de três continua em estudo.
 - Futuramente haverá cosméticos equipáveis, conquistados jogando na conta. Não criar essa funcionalidade agora.
 
-### 3.2 Decisões de apresentação e recomendações de regra
+### 3.2 Padrões de regra adotados para o MVP
 
-Estas recomendações permitem desenhar o fluxo, mas **não autorizam alterar silenciosamente a economia ou o motor**. Uma etapa de regras deve resolver os pontos abaixo antes de ativar essas interfaces.
+As decisões práticas adotadas para implementar nextmoves ficam visíveis ao jogador e são validadas pelo servidor:
 
-| Tema | Decisão visual | Recomendação de regra / pendência |
-|---|---|---|
-| Segunda pontuação | Chamar **Poder total**; decompor material, melhorias e avanço em detalhes. | Recomendo `P = M + U + 2A`, com `M ≤ 39` e `P ≤ limitePoder`. `U` é custo das melhorias atualmente equipadas; `A` é quantidade de peças em fileiras avançadas. Confirmar se o usuário pretendia gasto acumulado, incluindo melhorias removidas. |
-| Teto de poder | Mostrar `35 / 50` apenas quando esse teto vier da versão de regras. | 50 configurável. Não fixar em CSS, texto ou cálculo do cliente. |
-| Ouro | Saldo separado, ícone de moeda; preço de compra também usa moeda. | Atualizações da loja consomem ouro, mas recomendo não contar seu gasto em `U`. Avanço custa pontos de poder, não ouro, salvo futura regra explícita. |
-| Classes | Selos com nome e miniaturas das peças elegíveis. | Recomendo **Peões** como grupo próprio, **Menores = cavalo e bispo**, **Maiores = torre e dama**. Uma habilidade pode aceitar vários grupos. Rei fora das melhorias inicialmente. Não classificar peão como menor sem decisão explícita. |
-| Equipamentos | Tipo da melhoria em destaque; um espaço equipado na primeira versão. | Continuar com uma melhoria por peça até existir regra de combinação. Arma e encantamento não implicam automaticamente dois espaços acumuláveis. |
-| Feitiços | Modelo de carta de uso imediato, com resumo do estado antes/depois. | Fase de uso, custos, efeitos, presença na loja e limites não foram definidos. Recomendo iniciar apenas com feitiços de preparação. Aumentar tempo de partida ou teto de material exige regra própria. Não disponibilizar ainda. |
-| Loja | Cinco espaços numerados internamente, sem números decorativos visíveis. Compra substitui somente o espaço usado. | Recomendo atualização paga em progressão `1, 2, 3…`, reiniciada por preparação, mas a fórmula e probabilidades precisam de decisão. |
-| Justiça do sorteio | Nenhuma promessa de “mesmas ofertas” na nova interface sem garantia real. | A loja atual é igual para ambos. Reposição após compras exige definir sequência compartilhada ou individual e distribuição por raridade. Recomendo a mesma distribuição e sequência inicial para ambos; política completa ainda pendente. |
-| Reembolso | Prévia clara do que volta, do que é consumido e do efeito no poder. | Compras que renovam ofertas não podem permitir comprar/remover repetidamente com reembolso integral para sortear de graça. Definir custo não reembolsável ou restauração da oferta antes de ativar. |
-| Formação avançada | Zonas e custo por peça visíveis durante deslocamento. | Confirmar regras de peões reposicionados, primeiro movimento, en passant, roque e ameaça inicial. Manter Rei em e1/e8 até mudança explícita. |
+| Tema | Regra aplicada |
+|---|---|
+| Poder total | **P = M + U + 2A**, com material **M ≤ 39**, poder **P ≤ 50**, melhorias/feitiços adquiridos **U**, e quantidade de peças avançadas **A**. O custo de atualizar a loja não entra em U. Uma melhoria removida deixa de contar e reembolsa seu preço; feitiço comprado conta até ao usar. |
+| Classes | Peão, cavalo e bispo pertencem às **peças menores**; torre e dama às **peças maiores**. Rei não recebe melhorias. Uma carta pode aceitar as duas classes. |
+| Equipamentos | Cada peça tem um espaço de Arma e um espaço de Encantamento, permitindo combinar tipos distintos. Substituir uma carta devolve o preço da carta anterior do mesmo espaço. |
+| Avanço | Brancas podem usar as fileiras 1–4, com fileiras 3–4 custando 2 pontos de poder por peça. Pretas podem usar 8–5, com fileiras 6–5 custando 2. O Rei continua em e1/e8. Reposicionar mantém identidade; peão só conserva o avanço inicial de duas casas se estiver na fileira tradicional de partida. |
+| Loja | Cinco cartas por jogador. Os dois começam com a mesma seleção; uma compra substitui aquele espaço apenas na loja do comprador. A composição inicial garante armas para as duas classes e inclui Encantamentos e Feitiços. Atualizar substitui toda a loja e custa 1, 2, 3… moedas por tentativa; esse gasto não é reembolsado nem entra no Poder total. |
+| Feitiço implementado | **Instante extra** custa 7 moedas e concede 30 segundos uma vez, no turno do jogador, sem consumir o lance. O feitiço é adquirido na loja e não passa entre partidas. |
+| Encantamentos implementados | **Isca** (Raro) abre escolha de uma entre até três melhorias grátis para uma peça aliada elegível quando a peça encantada é capturada. **Segundo coração** (Lendário) cancela uma captura uma vez; o atacante não se move e o turno termina. |
+| Capturas de arma | Efeitos de arma **adicionam** movimentos/capturas às regras normais. Movimentos sem captura não ameaçam o Rei. Promoção remove os espaços de melhorias do peão. |
+| Renovação de ofertas | O servidor exclui as cinco ofertas visíveis ao gerar uma substituição/atualização. Feitiços já comprados não reaparecem para o mesmo jogador nessa sala. |
 
-**Exemplo de orçamento para o layout futuro:** material `15 / 39`; melhorias equipadas `20`; nenhuma peça avançada; poder total `35 / 50`; ouro exibido separadamente conforme saldo do servidor. Com duas peças avançadas: poder total `39 / 50`. A explicação informa que os 2 pontos de avanço são por peça, independentemente de estar na terceira ou quarta fileira.
+As peças avançadas contam 2 cada mesmo que sejam peões. O exemplo 15 material + 20 moedas em melhorias resulta em 35 Poder, sem avanço. A versão de regras atual usa limite fixo de 50; o valor pode ser ajustado depois de partidas de balanceamento.
 
-As anotações `[Height]` e `{Mo}` do arquivo de origem estão incompletas. Não interpretar `Height` como classe válida, inventar o encantamento ou atribuir estatísticas finais. O rascunho de armas diagonais/ortogonais inspira os diagramas da seção 7; as regras finais precisam dizer se **adicionam** ou **substituem** capturas tradicionais.
+O cartão de Feitiço vertical descrito em nextmoves não foi incluído: torre e dama já capturam uma casa vertical adjacente pelas regras tradicionais, então a carta, tal como escrita, não teria efeito. O catálogo também não oferece o exemplo de aumentar o limite de peças porque a proposta não define custo nem momento de ativação. “Instante extra” implementa o exemplo explícito de adicionar tempo. Isca sorteia até três opções elegíveis quando dispara; a escolha do jogador é explícita e a partida aguarda sua resolução.
 
-### 3.3 Limites da implementação atual
+### 3.3 Escopo implementado nesta etapa
 
-O código consultado tem oito ofertas fixas por sala, onze habilidades específicas por peça, 39 pontos de material, 12 moedas iniciais e uma melhoria por peça. Não tem raridade, feitiço, atualização de loja ou poder total.
+A sala mantém o orçamento de 39 pontos de material e 12 moedas iniciais, com cinco cartas de loja, Poder total máximo 50, classes de peças, raridades, Arma + Encantamento por peça e feitiços temporários. A loja inicial é a mesma para os dois lados e cada reposição posterior é privada.
 
-A preparação atual troca/recruta peças nas casas iniciais; **não há comando de deslocamento que preserve a identidade da peça entre casas**. `nextmoves.md` menciona reposicionamento pronto, mas `DraftAction` ainda só contém recrutar, sacrificar, equipar e remover melhoria. Deslocar e usar fileiras avançadas devem ser tratados como trabalho futuro de regra e interface.
+A preparação permite mover as peças nas quatro fileiras próprias, inclusive entrar/sair da zona avançada. O servidor confirma material, ouro, Poder, classe e posições antes de aceitar cada alteração. As regras de partida continuam autoritativas no servidor.
 
 ## 4. Sistema visual
 
@@ -133,7 +132,7 @@ As seis cores centrais:
 | `--color-board-black` | `#373B43` | Casas escuras em cinza-carvão, com contraste claro sobre a porcelana. |
 | `--color-board-white` | `#F5F5F3` | Casas brancas e superfícies de porcelana. |
 | `--color-silver` | `#B8C2CE` | Texto secundário, filetes e indicadores neutros. |
-| `--color-gold` | `#D8B777` | Destaque cerimonial e lendário. |
+| `--color-gold` | `#D8B777` | Ação principal e destaque cerimonial. |
 
 Tokens funcionais:
 
@@ -144,8 +143,10 @@ Tokens funcionais:
 | `--color-text-muted` | `#B8C2CE` | Ajuda, legendas, dados secundários. |
 | `--color-line` | `#424A58` | Borda decorativa/divisória; não usar como única identificação de controle. |
 | `--color-control-edge` | `#8895A8` | Limite visível de entradas e controles secundários. |
-| `--color-uncommon` | `#94CCB1` | Incomum. |
-| `--color-rare` | `#9FBFFF` | Raro. |
+| `--loot-ink` / comum | `#D8DEE7` | Prata em cartas e marcadores comuns. |
+| `--loot-ink` / incomum | `#A6D0FF` | Azul em cartas e marcadores incomuns. |
+| `--loot-ink` / raro | `#F2D789` | Ouro em cartas e marcadores raros. |
+| `--loot-ink` / lendário | `#FFBD86` | Âmbar alaranjado em cartas e marcadores lendários. |
 | `--color-success` | `#94CCB1` | Confirmação e estado pronto, acompanhados de texto/ícone. |
 | `--color-danger` | `#FF9696` | Erro, xeque e ação destrutiva. |
 | `--color-focus` | `#B5D5FF` | Foco de teclado. |
@@ -154,7 +155,7 @@ Usar as cores semânticas como texto sobre fundo escuro ou como borda/ícone. So
 
 As cores são especificação, não laudo de contraste já medido. Na futura etapa de verificação, exigir contraste de texto de pelo menos 4,5:1, texto grande de 3:1 e indicadores funcionais de 3:1; ajustar tokens mantendo a direção.
 
-O dourado preenchido identifica a ação principal da área. Ouro, seleção e raridade lendária usam formatos diferentes: moeda com valor, cantos da casa e selo com a palavra “Lendário”. Uma carta não ganha contorno dourado apenas por ser compatível. Verde de confirmação exige marca de pronto; verde de raridade exige selo “Incomum”. Vermelho fica reservado a xeque, erro e ação destrutiva; captura possível usa marcas neutras de alto contraste.
+O dourado preenchido identifica a ação principal da área. Moedas, seleção e raridade usam formatos diferentes: moeda com valor, cantos da casa e selo com nome da raridade. Compatibilidade reforça a borda na própria cor da carta. Verde identifica confirmação; vermelho fica reservado a xeque, erro e ação destrutiva. Marcadores de melhoria são pequenos selos quadrados de cantos suavizados, com fundo grafite, moldura metálica dupla, símbolo SVG e halo na cor da raridade. Ficam empilhados no canto superior direito, com 2 px entre eles, inclusive sobre casas claras. A largura acompanha a casa entre 11 e 18 px.
 
 ### 4.2 Tipografia
 
@@ -219,8 +220,8 @@ Manter SVG como formato. Criar uma família visual consistente de seis silhuetas
 - Todas as silhuetas precisam se separar de **ambas** as cores do tabuleiro. A sombra não é o único recurso de separação.
 - No máximo três planos de preenchimento e um brilho estreito por peça. Evitar texturas miúdas que desapareçam no celular.
 - Base oval sutil estabiliza o objeto; sombra curta não invade a casa vizinha.
-- Aparência de duas vidas, quando implementada, usa marcador `2`/`1` e descrição. A raridade não substitui esse contador.
-- Ícones de habilidade ficam em um canto da casa, com fundo sólido contrastante, sem encobrir a silhueta. No máximo um marcador compacto na versão inicial; detalhes ficam no inspector.
+- Segundo coração usa marcador `♥` enquanto a defesa estiver disponível; após o impacto, o marcador some. A raridade não substitui esse estado funcional.
+- Ícones de habilidade ficam em um canto da casa, com fundo sólido contrastante, sem encobrir a silhueta. Até dois selos ficam em coluna: Arma acima, Encantamento abaixo quando ambos estão equipados; detalhes ficam no inspector.
 - SVGs decorativos usam `aria-hidden`; a casa interativa descreve posição, peça, lado, melhoria e estado.
 
 ### 5.3 Estados do tabuleiro
@@ -259,11 +260,11 @@ Apresentar uma régua horizontal com três blocos, não três cartões promocion
 2. **Poder total:** `35 / 50` + ícone de losango dividido.
 3. **Ouro disponível:** `8` + moeda.
 
-Ouro é um saldo numérico. Material e poder usam valores `usado / limite`; a barra de poder, quando existir, é a principal. Material tem uma régua secundária menor: sua contribuição ao poder precisa estar explícita para não sugerir dois orçamentos independentes que podem ser somados. No jogo atual, material é a única barra. Abrir “Como é calculado” expõe a soma e o teto da versão de regras.
+Ouro é um saldo numérico. Material e Poder usam valores `usado / limite`; a barra de Poder é a principal. Material aparece como régua secundária para deixar clara sua contribuição e evitar sugerir dois orçamentos independentes que podem ser somados. Abrir “Como é calculado” expõe a soma e o teto da versão de regras.
 
-Na compra ou deslocamento, mostrar previsão textual `Poder 35 → 39` e `Ouro 8 → 4`. A prévia não altera o saldo real. Se exceder o teto: “Esta escolha excede o poder em 2 pontos.” O botão permanece identificável e sua explicação acessível, mesmo desabilitado.
+Na compra ou deslocamento, a interface apresenta Material, Poder e Ouro confirmados. O servidor rejeita uma alteração que ultrapasse material 39, ouro disponível ou Poder 50. Uma prévia textual `Poder 35 → 39` e `Ouro 8 → 4` é refinamento visual futuro; não sugerir que já existe quando não for exibida.
 
-No jogo atual, renderizar apenas material e ouro. Não acrescentar `50` como se fosse uma restrição já validada.
+O teto 50 está ativo. Poder combina material, custo das melhorias/feitiços comprados e custo das peças em fileiras avançadas.
 
 ### 6.3 Inspector da peça
 
@@ -281,13 +282,12 @@ No celular, tocar peça atualiza uma faixa compacta abaixo do tabuleiro, sem abr
 
 Na troca de melhoria, mostrar “Sai: [efeito atual]” e “Entra: [novo efeito]”, preço, reembolso e saldo previsto. Usar “Equipar em Peão e2 por 4 moedas” na primeira compra e “Trocar melhoria” acompanhado do custo líquido na substituição. Se houver crédito líquido, escrever “Receber 2 moedas”; evitar preço negativo. Valores dependem da regra real de reembolso. A compra ocorre nessa ação explícita, sem um diálogo extra quando a prévia já estiver completa.
 
-### 6.4 Posicionamento futuro
+### 6.4 Posicionamento avançado implementado
 
 - Casas próprias normais: fileiras 1/2 para brancas, 8/7 para pretas.
 - Casas próprias avançadas: fileiras 3/4 para brancas, 6/5 para pretas.
 - “Terceira fileira” é relativa ao jogador. As coordenadas continuam as oficiais do tabuleiro.
-- Ao selecionar reposicionamento, mostrar contorno tracejado na zona avançada e legenda “Avanço: +2 de poder por peça”. Não escrever `+2` em todas as casas permanentemente.
-- Prévia sobre casa avançada mostra uma cápsula `+2 poder`; retorno à zona normal mostra `−2 poder`, se essa devolução for a regra adotada.
+- A zona avançada recebe marcação discreta e cada peça nela acrescenta 2 ao Poder. O orçamento mostra o custo total; a prévia individual `+2`/`−2` descrita acima permanece refinamento visual.
 - Clique/toque na origem e depois no destino é a interação obrigatória. Arrastar pode ser adicionado como alternativa posterior.
 - Uma casa contém uma peça. Clicar destino ocupado não troca peças implicitamente. Mostrar “Escolha uma casa vazia”.
 - Movimento mantém ID, melhoria e seleção da peça. Não implementar reposicionamento como sacrificar/recrutar: isso teria efeitos indevidos sobre custo e loja.
@@ -330,7 +330,7 @@ O exemplo mostra **hierarquia**, não uma habilidade nova aprovada: nome, preço
 |---|---|---|
 | Arma | Lâmina simples | Modifica movimento/captura; diagrama com origem, destinos e trajetos. |
 | Encantamento | Selo circular com centro vazio | Efeito persistente, condição e cargas quando aplicáveis. |
-| Feitiço | Faísca de três traços | Uso imediato; comparar antes/depois e explicar consumo. Apenas modelo visual futuro. |
+| Feitiço | Faísca de três traços | Uso durante a partida; mostrar o efeito e consumo. No catálogo atual, Instante extra concede 30 segundos uma vez no próprio turno. |
 
 Para armas diagonais, desenhar quatro segmentos diagonais saindo da origem. Para ortogonais, quatro segmentos ortogonais. Não usar as letras `X` e `+` como nome da habilidade. Proposta de nomes legíveis: “Golpe diagonal” e “Golpe ortogonal”, dependentes da finalização do catálogo.
 
@@ -342,27 +342,29 @@ Indicar “Frente da peça” no diagrama e usar os deslocamentos relativos defi
 
 | Raridade | Selo / cor | Material da carta | Movimento especial |
 |---|---|---|---|
-| Comum | Círculo simples / prata | Pedra lisa, contorno neutro | Reposição simples de 160 ms. |
-| Incomum | Dois traços / verde mineral | Filete no cabeçalho | Mesma reposição; sem partículas. |
-| Raro | Losango / azul mineral | Rebaixo e filete azul | Um traço de luz percorre a borda em 420 ms. |
-| Lendário | Coroa geométrica / ouro | Moldura dupla e recorte mais marcado | Selo central abre e acende a moldura em 650 ms; até seis fragmentos locais. |
+| Comum | Losango vazado / prata | Grafite com prata no fundo, moldura, título e botão | Passagem de luz ao aparecer. |
+| Incomum | Losango vazado / azul | Azul profundo com filetes azul-claro | Passagem de luz ao aparecer. |
+| Raro | Losango parcialmente preenchido / ouro | Bronze escuro e ouro, moldura dupla | Entrada luminosa e aura suave em ciclo de 8 s. |
+| Lendário | Losango preenchido / âmbar | Fundo cobre/obsidiana, filetes alaranjados | Entrada luminosa, aura em ciclo de 6,5 s e três pequenas brasas junto às bordas. |
 
-Raridade nunca é apenas cor. Cartas comuns recebem o mesmo cuidado de tipografia e legibilidade. A cerimônia especial acontece uma vez quando uma oferta nova chega; equipar usa o feedback curto de compra, sem repetir a revelação. Hover, seleção, rolagem e reconexão não repetem a cerimônia. Raridade não significa compra com dinheiro real nem recomendação automática de força: compatibilidade e efeito permanecem mais evidentes que o selo.
+Direção solicitada: acabamento inspirado em itens de Diablo 3/4, com intensidade contida e arte vetorial original. Raridade aparece por cor, nome e selo. A luz de entrada dura 720 ms, com 45 ms de intervalo entre espaços; mudanças de seleção e saldo não reiniciam a entrada de uma carta que permanece montada. As auras seguem discretas nas raras/lendárias e pausam com a loja fora da tela ou aba oculta. Movimento reduzido mantém o acabamento estático.
+
+O usuário aprovou o padrão de emblemas: traços finos, geometria de losango/círculo e um símbolo central relacionado ao efeito. Preservar esse padrão em ícones futuros; não criar ilustrações para todas as cartas agora, pois o catálogo será revisado. Isca, Segundo coração e Instante extra recebem emblemas; armas conservam os diagramas funcionais. Marcadores nas peças compartilham a paleta das cartas, com entrada de 280 ms e reflexo de baixa intensidade a cada 6,6 s. O segundo selo entra 80 ms depois do primeiro. Os símbolos permanecem legíveis; a raridade também é descrita em texto acessível. Movimento reduzido mantém apenas o acabamento estático.
 
 ### 7.4 Comportamento da loja futura
 
-- **Cinco espaços estáveis**. Comprar no terceiro espaço repõe apenas o terceiro. As demais ofertas mantêm posição, foco e estado.
-- Botão “Atualizar loja · 1 moeda” usa o preço real da próxima atualização; após resposta, mostra o novo preço. Não esconder custo numa dica.
+- **Cinco espaços estáveis.** A loja inicial é igual para os dois; uma compra repõe aquele espaço apenas para o comprador. As demais ofertas mantêm posição, foco e estado.
+- Botão “Atualizar loja” informa o preço crescente da próxima atualização: 1, 2, 3… moedas. Após a resposta, mostra o novo preço. Esse gasto é contabilizado e não reembolsado.
 - Durante atualização, espaços mantêm altura e exibem o estado pendente. Sem roleta, abertura de pacote ou suspense artificial.
-- O servidor escolhe ofertas, valida saldo, compatibilidade, teto e versão da loja. A animação começa após confirmação; jamais sorteia raridade no cliente.
+- O servidor escolhe ofertas e raridade, valida saldo, compatibilidade, teto e versão da loja. A animação começa após confirmação; jamais sorteia raridade no cliente.
 - Enquanto espera, manter a oferta antiga identificável com texto “Comprando…”. Se falhar, preservar oferta/saldo confirmados e explicar a falha.
-- Compra exige alvo válido. Sem peça selecionada, ação vira “Escolher peça”; não gastar ouro para deixar uma melhoria num inventário inexistente.
-- Se houver só uma melhoria permitida por peça, trocar exige resumo da melhoria removida e custo líquido confirmado pelas regras.
+- Compra de Arma/Encantamento exige alvo compatível; Feitiços vão para a reserva da partida. Sem alvo, a carta oferece escolher uma peça; nada é comprado automaticamente.
+- Cada peça permite uma Arma e um Encantamento. Trocar um espaço mostra a melhoria removida e o preço líquido confirmado pelo servidor.
 - Usar opção “Destacar compatíveis” para realçar ofertas e explicar incompatíveis. O nome descreve o comportamento: não reordenar nem eliminar espaços durante compra/reposição. Manter texto e regras de ofertas incompatíveis legíveis; reduzir apenas ênfase da ação.
 - Quando todas forem incompatíveis, dizer “Estas ofertas não servem à peça selecionada. Escolha outra peça ou atualize a loja.” Não garantir compatibilidade no sorteio sem regra aprovada.
-- Mostrar “Armas e encantamentos · 5 ofertas” quando a nova loja existir. Feitiços não entram nesse mercado sem decisão explícita.
+- A composição atual inclui Armas para as duas classes, um Encantamento e um Feitiço; o quinto espaço sorteia do restante. Um Feitiço comprado fica guardado e não é oferecido novamente para o mesmo jogador na sala.
 
-**Transição:** o redesenho inicial acomoda a quantidade real de ofertas, atualmente oito, em grade/rolagem. Mudar o número exibido para cinco exige primeiro a mudança autoritativa. Não ocultar três ofertas do jogador.
+**Reposição:** o sorteio exclui as ofertas visíveis para aquele jogador. Comprar não muda a loja adversária. O MVP não define probabilidades ponderadas por raridade; o catálogo atual é sorteado sem uma tabela de chances explícita.
 
 ## 8. Telas e layouts
 
@@ -418,9 +420,9 @@ Em celular, a ordem funcional é título curto, formulário e cena reduzida; dec
 
 ### 8.3 Preparação no celular
 
-- Cabeçalho compacto 56 px, orçamento logo abaixo em duas colunas hoje e três quando existir poder; com texto ampliado, quebra em linhas.
+- Cabeçalho compacto 56 px, orçamento logo abaixo em três colunas para Material, Poder e Ouro; com texto ampliado, quebra em linhas.
 - Tabuleiro em largura total. A faixa da seleção aparece logo abaixo e abre a ficha somente por “Ver peça”. Na partida, tocar uma peça também não abre um painel que encobre casas automaticamente.
-- Mercado abaixo, como faixa horizontal. Carta com largura `min(80vw, 300px)`; rolagem com encaixe suave, barra de rolagem disponível e indicação textual “Oferta 2 de 8”, derivada da quantidade real. Não mover automaticamente a faixa após compra. A faixa contextual do mercado mantém alvo e ouro visíveis.
+- Mercado abaixo, como faixa horizontal. Carta com largura `min(80vw, 300px)`; rolagem com encaixe suave, barra de rolagem disponível e indicação “Oferta 2 de 5”. Não mover automaticamente a faixa após compra. A faixa contextual do mercado mantém alvo e ouro visíveis.
 - Não usar carrossel automático, swipe obrigatório ou múltiplas áreas horizontais sobrepostas. Botões anterior/próximo disponíveis quando houver overflow.
 - Rodapé fixo “Revisar exército”, incluindo área segura do dispositivo. Reserva de espaço igual à sua altura no conteúdo.
 - Ao escolher “Equipar”, caso não haja alvo, recolher a ficha e orientar seleção no tabuleiro; permitir cancelar. A oferta fica identificada até concluir/cancelar.
@@ -501,20 +503,21 @@ Layouts devem aceitar nomes de jogadores longos e zoom de texto. Truncar apelido
 | En passant | Remover peão capturado em sua casa real; mover atacante | 200 ms | Estado final imediato. |
 | Equipar | Selo da carta se dissolve; marcador aparece na peça | 280 ms | Marcador imediato + mensagem. |
 | Sacrifício na preparação | Estado e saldo confirmados mudam juntos; cópia decorativa da peça desaparece | 180 ms | Remoção imediata. |
-| Reposição comum/incomum | Crossfade no mesmo espaço | 160 ms | Troca imediata. |
-| Reposição rara | Luz percorre contorno, sem flash branco | 420 ms | Borda azul estática e selo “Raro”. |
-| Reposição lendária | Selo abre, moldura acende, até seis fragmentos dentro da carta | 650 ms | Moldura estática e selo “Lendário”. |
+| Entrada de oferta | Passagem diagonal de luz na cor da carta, atrás do conteúdo | 720 ms + até 180 ms de escalonamento | Carta visível sem passagem de luz. |
+| Carta rara em repouso | Aura dourada discreta no topo | Ciclo lento de 8 s, sem bloqueio | Aura estática. |
+| Carta lendária em repouso | Aura âmbar e três brasas pequenas nas bordas | Aura de 6,5 s; brasas de 7–9 s | Aura estática, sem brasas. |
+| Melhoria equipada no tabuleiro | Selos metálicos em coluna; símbolo e halo na cor da raridade | Entrada de 280 ms ao montar o selo; reflexo de 6,6 s sem deslocamento | Acabamento estático, símbolo sempre visível. |
 | Revelação dos exércitos | Moldura acende; peças aparecem juntas | 500 ms dentro do prazo do servidor | Aparição imediata. |
 | Xeque | Contorno surge uma vez; permanece estático | 160 ms | Contorno imediato. |
 | Promoção confirmada | Crossfade peão → nova peça | 200 ms | Troca imediata. |
 | Resultado | Filete sob título e iluminação breve da moldura | 500 ms; sem cobrir tabuleiro | Resultado estático. |
-| Duas vidas, futuro | Primeiro impacto quebra um pequeno selo; contador passa 2 → 1 | 300 ms, só após regra/evento real | Alterar contador e mensagem. |
+| Segundo coração | Marcador de coração some quando a defesa é consumida; atacante fica na origem | O estado muda junto com a resposta autoritativa | Marcador disponível atualizado imediatamente. |
 
 Ataque lendário **não** ganha animação longa a cada lance. Sua identidade permanece no marcador e na ficha; o deslocamento respeita o mesmo teto de 220 ms das outras peças. Efeitos não podem denunciar preparação privada do adversário.
 
-Se uma atualização trouxer cinco raras/lendárias, animar as bordas em conjunto, sem cinco explosões: no máximo uma carta com fragmentos, escolhida pela maior raridade e, em empate, pelo primeiro espaço. Todas mantêm selo e acabamento correspondentes.
+Se uma atualização trouxer várias raras/lendárias, manter a entrada escalonada e contida. Cada lendária tem apenas três pequenas brasas nas bordas, com ciclos lentos; o centro permanece livre para leitura. Todas mantêm selo e acabamento correspondentes.
 
-**Orçamento de atenção:** entrada cênica até 700 ms no total, considerando atrasos; resposta comum até 220 ms; equipamento até 280 ms; cerimônia lendária até 650 ms. Nenhuma duração é um bloqueio de clique. Em segundo plano, finalizar efeitos pendentes; ao retornar, mostrar o estado atual. Sob movimento reduzido, usar acabamento estático e mensagem textual, sem perder informação ou prolongar espera.
+**Orçamento de atenção:** entrada cênica até 700 ms no total, considerando atrasos; resposta comum até 220 ms; equipamento até 280 ms. As pulsações de raridade podem durar mais, mas não bloqueiam clique nem texto. Em segundo plano, finalizar efeitos pendentes; ao retornar, mostrar o estado atual. Sob movimento reduzido, usar acabamento estático e mensagem textual, sem perder informação ou prolongar espera.
 
 ### 9.3 Sincronização e implementação visual futura
 
@@ -615,20 +618,20 @@ Sem dependência de geração de imagens para o tabuleiro jogável. Qualquer ilu
 
 ### Primeira implementação e dependências
 
-“Implementada” abaixo significa que existe código para a etapa, sem comprovação visual. A primeira versão tinha coordenadas dentro das casas, preenchimento dourado no último lance, ficha móvel sem painel e sacrifício em diálogo separado. P1–P4 corrigem esses pontos e acrescentam compra com alvo/custos e destaque de tempo baixo. O catálogo completo de animações continua sendo referência: capturas com camada transitória, cerimônias de raridade e cosméticos não estão concluídos.
+“Implementada” abaixo significa que existe código para a etapa, sem comprovação integral das regras. A primeira versão tinha coordenadas dentro das casas, preenchimento dourado no último lance, ficha móvel sem painel e sacrifício em diálogo separado. P1–P4 corrigiram esses pontos e acrescentaram compra com alvo/custos e destaque de tempo baixo. O acabamento das cartas foi conferido no navegador: entrada luminosa, aura lenta nas raras/lendárias e marcadores de peça com halo estático. Camadas transitórias de captura e cosméticos continuam adiados.
 
 | Etapa | Alterações | Arquivos principais | Estado |
 |---|---|---|---|
 | D1 — Fundação | Tokens, tipografia, campos/botões/diálogos e estrutura responsiva. | `app/globals.css`, `app/layout.tsx`, `components/Modal.tsx` | Implementada; sem teste visual. |
 | D2 — Tabuleiro | Preto/branco, moldura, peças SVG, coordenadas, estados e navegação por setas. | `components/Board.tsx`, `components/Piece.tsx` | Implementada; orientação preservada no código, legibilidade não verificada no navegador. |
-| D3 — Entrada | Cenário monumental, título e acesso a casual/amigos/código. | `components/GameApp.tsx`, CSS da cena | Implementada usando CSS e tabuleiro decorativo. |
-| D4 — Preparação atual | Inspector, orçamento atual, cinco ofertas visíveis (oito no controle de desenvolvimento) e diagramas; confirmação do sacrifício. Tabuleiro mostra somente as quatro fileiras do jogador. | `components/GameApp.tsx`, `components/AbilityDiagram.tsx` | Implementada para os efeitos reais; sem raridades ou regras futuras. |
-| D5 — Partida | Barras, relógios, ficha, histórico, promoção, conexão, revisão e resultado. | `components/GameApp.tsx`, `app/globals.css` | Estados representados; sem teste visual. |
-| D6 — Movimento | Transição da peça por identidade entre origem e destino; rei e torre no roque; movimento reduzido e cancelamento por nova posição. | `components/Board.tsx`, `app/globals.css` | Implementada com eventos de estado recebidos. Efeitos de raridade/vida aguardam catálogo e regras reais. |
-| R — Novas regras | Projeto separado para resolver seção 3 e implementar servidor/catálogo antes da interface correspondente. | `lib/catalog.ts`, `lib/draft.ts`, `lib/types.ts`, `server/ChessRoom.ts`, eventualmente `lib/chess.ts` | Pendente: economia, cinco ofertas, reposição, classes, raridades e avanço precisam de validação autoritativa. |
-| D7 — Interface das novas regras | Poder, mercado de cinco espaços, atualização, compatibilidade e efeitos de raridade. | Componentes já preparados | Só habilitar o que R realmente entregou. |
+| D3 — Entrada | Cenário monumental compacto, chamada direta e acesso a casual/amigos/código. | `components/GameApp.tsx`, CSS da cena | Implementada usando CSS e tabuleiro decorativo; chamada revisada para linguagem direta. |
+| D4 — Preparação atual | Inspector, Material/Poder/Ouro, cinco ofertas compactas e diagramas; confirmação do sacrifício. Tabuleiro mostra somente as quatro fileiras próprias e indica zonas avançadas. | `components/GameApp.tsx`, `components/AbilityDiagram.tsx`, `components/Shop.tsx` | Implementada para o catálogo real; a nova etapa aguarda verificação visual. |
+| D5 — Partida | Barras, relógios, ficha, histórico, promoção, conexão, revisão e resultado; Feitiço de 30 segundos. | `components/GameApp.tsx`, `app/globals.css` | Estados representados; última etapa sem inspeção visual. |
+| D6 — Movimento | Transição da peça por identidade entre origem e destino; Rei e torre no roque; movimento reduzido e cancelamento por nova posição. | `components/Board.tsx`, `app/globals.css` | Implementada; inclui indicação do Segundo coração disponível. |
+| R — Novas regras | Classes, raridades, Poder, feitiço, Isca/Segundo coração, reposição paga e preparação em quatro fileiras. | `lib/catalog.ts`, `lib/draft.ts`, `lib/types.ts`, `server/ChessRoom.ts`, `lib/chess.ts`, `lib/clock.ts` | Implementada em servidor e cliente; equilíbrio ainda precisa de partidas humanas. |
+| D7 — Interface das novas regras | Poder, loja de cinco espaços, atualização, compatibilidade, aplicação de Isca, feitiço de tempo e acentos de raridade. | `components/GameApp.tsx`, `components/Board.tsx`, `components/PieceInspector.tsx`, `components/Shop.tsx`, `app/globals.css` | Implementada; não testada/inspecionada nesta etapa. |
 
-Feitiços, efeitos de morte e duas vidas entram somente em etapas específicas de regras. A seção de animações documenta a direção para eles; não é autorização para implementá-los de forma improvisada.
+Isca, Segundo coração e Instante extra já têm regras executáveis. A seção de animações separa essas implementações de efeitos ainda futuros; cosméticos permanecem adiados.
 
 ### Aplicação da revisão 1.1, em ordem
 
@@ -638,7 +641,7 @@ Feitiços, efeitos de morte e duas vidas entram somente em etapas específicas d
 | P2 — Compra compreensível | Reorganizar carta; expor alvo, reembolso, custo líquido e saldo; permitir começar pela oferta; explicar incompatibilidade sem apagar sua regra. | Selecionar não compra; trocar mostra o efeito perdido e adquirido; ação pendente não permite envio duplicado. |
 | P3 — Preparação móvel | Faixa de seleção, ficha sob demanda, contexto no mercado e sacrifício na mesma ficha. | Seleção sobrevive a abrir/fechar; retornar do tabuleiro preserva oferta/rolagem; painel não se sobrepõe a outro diálogo ou ao rodapé. |
 | P4 — Acabamento | Portal escalonado, pedestal em patamares, menos legendas repetidas e uma única entrada coreografada. | O formulário vem antes da cena no celular; decoração não recebe eventos nem atrasa controles. |
-| P5 — Efeitos futuros | Raridades, cargas e prévia de cosméticos conforme as seções 7, 9 e 10. | Ativar somente após catálogo/eventos reais; manter aparência padrão e movimento reduzido. Cosméticos continuam adiados. |
+| P5 — Cosméticos futuros | Inventário e itens equipáveis obtidos jogando, sem alterar legibilidade/regras. | Só após conta, persistência e economia de recompensas; manter aparência padrão e movimento reduzido. Cosméticos continuam adiados. |
 
 P1–P4 refinam a interface atual e não dependem da nova economia. Implementar cada prioridade em uma etapa pequena, registrando o resultado. Não acrescentar dependência para painel, ícone ou animação sem necessidade concreta. Os critérios descrevem comportamento esperado, não verificações realizadas nesta revisão documental.
 
@@ -649,7 +652,7 @@ P1–P4 refinam a interface atual e não dependem da nova economia. Implementar 
 - P3: seleção compacta; `PieceInspector` em painel inferior sob demanda no celular; confirmação de sacrifício dentro da ficha; faixa de alvo/ouro no mercado, navegação anterior/próxima e revisão fixa com área segura. A ficha da peça e o histórico durante a partida permanecem no fluxo abaixo do tabuleiro, sem painel automático.
 - P4: portal escalonado e pedestal em patamares, formulário antes da cena compacta no celular e entradas com duração total de até 700 ms. Movimento reduzido elimina as animações; redimensionamento e mudança de visibilidade cancelam deslocamentos ativos.
 
-A conexão foi revisada separadamente: inicialização conjunta em desenvolvimento/produção, porta configurável, arquivos de ambiente alinhados, origens locais em desenvolvimento, consulta de disponibilidade e nova tentativa. Os detalhes e limites estão em `implementacao.md`. P5 e as novas regras continuam adiados. A conexão, preparação, loja e compra foram verificadas no navegador. Os 15 testes automatizados e typecheck passaram; build e inspeção dos breakpoints seguem pendentes.
+A conexão foi revisada separadamente: inicialização conjunta em desenvolvimento/produção, porta configurável, arquivos de ambiente alinhados, origens locais em desenvolvimento, consulta de disponibilidade e nova tentativa. Os detalhes estão em `implementacao.md`. As regras nextmoves foram adicionadas depois das verificações anteriores. Esta etapa não executou testes, typecheck, build ou inspeção no navegador; responsividade da nova loja segue pendente.
 
 ### Critérios de aceite visual para usar quando a verificação for retomada
 
@@ -675,18 +678,16 @@ A conexão foi revisada separadamente: inicialização conjunta em desenvolvimen
 
 **Esses itens ainda não foram verificados.** O usuário pediu para não executar testes nesta etapa; implementar uma aparência ainda não demonstra como ela se comporta em diferentes navegadores e telas.
 
-## 14. Decisões pendentes, por prioridade
+## 14. Decisões ainda em aberto
 
-As decisões visuais estão fechadas neste guia. Antes de implementar as novas regras do arquivo de origem, resolver:
+As regras-base de `nextmoves.md` estão implementadas com as interpretações registradas na seção 3 e em `regras-prototipo.md`. Permanecem como trabalho futuro:
 
-1. Confirmar cálculo de poder, inclusão do avanço, valor máximo e tratamento de melhorias removidas. Recomendação: material + melhorias equipadas + 2 por peça avançada; teto inicial 50 configurável.
-2. Confirmar os três grupos propostos, incluindo peões separados e Rei excluído inicialmente.
-3. Definir atualização de loja, sequência de sorteio, probabilidades por raridade, reembolso e proteção contra atualizações gratuitas por compra/remoção.
-4. Definir posicionamento avançado e consequências para movimentos iniciais, ameaças, roque e en passant.
-5. Completar nomes e efeitos incompletos; definir se armas adicionam ataques; decidir número de melhorias simultâneas por peça.
-6. Especificar feitiços e efeitos de morte, incluindo janelas de uso e impacto sobre relógio/orçamento. Não usar “ganhar três melhorias ao morrer” sem um fluxo de escolha e tempo definido.
+1. Balancear 12 moedas, preços, catálogo, Poder máximo 50, avanço de 2 pontos e custo crescente da atualização usando partidas humanas.
+2. Definir probabilidades por raridade e ampliar os Feitiços/Encantamentos quando os efeitos tiverem preço, janela de uso, duração e limites claros.
+3. Revisar o custo/benefício de Isca, Segundo coração e do Feitiço de tempo; verificar taxa de uso e impacto no resultado por habilidade/composição.
+4. Nome definitivo, contas, recompensas persistentes, cosméticos equipáveis e melhor de três continuam fora do escopo desta etapa.
 
-Nome definitivo, distribuição de cosméticos, recompensas e melhor de três podem continuar adiados. Os refinamentos P1–P4 podem avançar sobre o protótipo atual. Resolver R antes de apresentar novas regras de preparação ou o mercado de cinco ofertas.
+O efeito vertical sem diferença do xadrez tradicional e o Feitiço de aumento do limite de peças sem parâmetros foram deixados fora do catálogo e descritos na seção 3.2.
 
 ## 15. Referências e registro desta entrega
 
@@ -696,4 +697,16 @@ Nome definitivo, distribuição de cosméticos, recompensas e melhor de três po
 - Registro da cópia lida: SHA-256 `d91970639e9f5c37682ac7ab60094d35f1c7c1f38d731bd56396563aee10c1d3`. A instalação usou a referência `main`; esse hash identifica o conteúdo consultado nesta entrega.
 - Aplicação da skill: direção específica ao xadrez, hierarquia tipográfica, composição deliberada, protagonismo visual concentrado e movimento com propósito.
 - Este documento foi originalmente produzido antes de alterar a interface. A aplicação posterior de D1–D6 e seus limites está registrada em [implementacao.md](implementacao.md). Os detalhes de peça são SVG/CSS; não foram adicionados imagens raster nem áudio.
-- Revisão 1.1 em 28/09/2026: releitura da skill local, de `nextmoves.md` e da interface existente; decisões refinadas e divergências registradas por leitura de código. Não houve alteração do aplicativo nem teste nesta revisão.
+- Revisão 1.2 em 28/09/2026: aplicado `nextmoves.md` ao catálogo, servidor, montagem, motor, interface e animações; regras executáveis registradas em `regras-prototipo.md`. Esta etapa não rodou testes, typecheck, build nem inspeção visual.
+
+
+## 22. Hierarquia e leitura das cartas de melhoria
+
+As cartas devem priorizar nome, tipo, raridade e regra. O nome fica no topo em destaque; abaixo, o tipo aparece com ícone e rótulo de pelo menos 15 px, acompanhado da raridade. Armas usam espada, Encantamentos usam estrela e Feitiços usam varinha com brilho. A classe compatível usa selo curto: **Plebeu** para peão, cavalo e bispo; **Realeza** para torre e dama. O texto da carta explica seu efeito específico.
+
+Ao passar o cursor (e ao focar pelo teclado) em Plebeu, Realeza, tipo, raridade ou símbolos do diagrama, exibir uma explicação simples. Arma acrescenta movimentos/capturas; Encantamento aplica a condição descrita; Feitiço fica guardado para ativação conforme o texto da carta. A raridade é cosmética. O diagrama explica movimento, captura e salto. O Rei continua inelegível e não recebe um selo de classe.
+
+O preço aparece apenas no botão de compra/equipamento. Não duplicar custo, alvo ou sequência de saldo no rodapé da carta. Se a compra substituir uma melhoria, mostrar somente “Substitui [nome]”; se faltarem moedas, mostrar o saldo faltante. Incompatibilidade e estado equipado continuam visíveis porque afetam a ação possível.
+
+
+Ao selecionar uma peça no tabuleiro, tocar/clicar nela novamente limpa a seleção. Durante a preparação, se o jogador tiver iniciado uma escolha de melhoria, o segundo clique na peça conclui a escolha em vez de desmarcá-la.

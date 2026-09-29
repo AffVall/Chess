@@ -1,70 +1,68 @@
-# Regras atuais — protótipo 0.1.0
+# Regras atuais — protótipo 0.2.0
 
-Este documento substitui os pontos conflitantes da proposta inicial. A implementação foi autorizada pelo usuário após as correções sobre peões, dinheiro inicial, loja aleatória e relógio.
+Este é o resumo das regras executadas pelo servidor. A fonte dos valores é `lib/catalog.ts`; a validação da montagem fica em `lib/draft.ts`, e as regras da partida em `lib/chess.ts` e `server/ChessRoom.ts`. Os valores abaixo formam um primeiro conjunto jogável, não uma afirmação de equilíbrio.
 
-## Decisões confirmadas pelo usuário
+## Preparação e orçamento
 
-- Peões participam da montagem, podem ser sacrificados e receber melhorias.
-- Cada jogador começa com dinheiro para escolher as melhorias que quer comprar.
-- A loja é aleatória e deve ter bastante variedade.
-- Relógio de 10 minutos por jogador, sem acréscimo por lance.
-- Melhorias não persistem entre partidas.
-- Melhor de três é uma possibilidade para o futuro, com atenção à duração e ao caráter casual. Não implementar séries agora.
+- Cada jogador começa com a formação tradicional de um lado do tabuleiro: 39 pontos de material e 12 moedas temporárias. Peões podem ser reposicionados, melhorados, substituídos ou sacrificados.
+- Valores de material: peão 1; cavalo e bispo 3; torre 5; dama 9. O Rei é obrigatório na casa inicial, vale 0 para o orçamento e não pode ser recrutado, movido, melhorado nem sacrificado.
+- Material ativo não pode ultrapassar 39. O jogador pode trocar ou sacrificar outras peças para obter moedas: uma peça removida devolve seu valor de material e o preço das melhorias nela equipadas; depois, a nova peça ou melhoria é cobrada.
+- Cada peça não-Rei pode ocupar uma casa vazia da metade própria, dentro de quatro fileiras: brancas 1–4; pretas 8–5. Fileiras avançadas são 3–4 para brancas e 6–5 para pretas; cada peça ali custa 2 pontos de Poder. Isso inclui peões. O Rei fica em e1/e8.
+- Reposicionar preserva a identidade e as melhorias. O peão só pode avançar duas casas no primeiro lance se continuar na fileira inicial tradicional, sem ter se movido.
+- Classes para compatibilidade: peão, cavalo e bispo são peças menores; torre e dama são peças maiores. Uma carta pode servir a uma ou às duas classes. O Rei não recebe habilidades.
+- Cada peça tem um espaço de Arma e um de Encantamento. A mesma habilidade pode ser aplicada a várias peças. Feitiços ficam no inventário temporário da preparação, sem ocupar espaço de uma peça; o mesmo feitiço não pode ser comprado duas vezes na sala.
+- **Poder total:** `material + preços das melhorias equipadas + preços dos feitiços guardados + 2 × peças avançadas`. Limite: 50. O saldo de moedas não faz parte da soma. Remover ou substituir uma melhoria reembolsa o preço correspondente e recalcula o Poder.
+- A atualização paga da loja gasta moedas e não acrescenta Poder. Para conservar o orçamento, a validação registra o total gasto em atualizações: `material + melhorias + feitiços guardados + moedas restantes + gasto em atualizações = 51`.
 
-## Parâmetros iniciais escolhidos para tornar a primeira etapa jogável
+## Loja aleatória
 
-Esses valores são hipóteses de teste e não uma afirmação de equilíbrio.
+- A loja tem cinco espaços e é gerada pelo servidor a partir de 16 cartas. A composição inicial inclui pelo menos uma Arma compatível com peças menores, uma com peças maiores, um Encantamento e um Feitiço; o quinto espaço é sorteado do restante.
+- Os jogadores recebem a mesma loja inicial. A compra repõe apenas o espaço do comprador; a reposição é privada e não oferece nenhuma das cinco cartas que já estão visíveis para esse jogador.
+- Atualizar troca as cinco cartas pessoais. O preço é 1 moeda na primeira vez e aumenta em uma moeda a cada atualização (`1, 2, 3…`). A reposição também evita as ofertas visíveis e os Feitiços que o jogador já comprou.
+- Não há estoque compartilhado entre jogadores, compras com dinheiro real, saldo persistente ou melhorias permanentes. Uma sala nova reinicia a economia.
 
-- Começar com o exército tradicional (39 pontos) e 12 moedas.
-- **Material e dinheiro são recursos separados.** O material ativo nunca passa de 39. Melhorias custam moedas e não ocupam pontos de material. Isso substitui a fórmula antiga que juntava os dois custos.
-- O valor de uma peça é tanto seu custo de recrutamento quanto seu valor de sacrifício: peão 1, cavalo/bispo 3, torre 5, dama 9. Rei é obrigatório e não pode ser comprado, melhorado, sacrificado ou movido durante a preparação.
-- Trocar ou sacrificar uma peça equipada reembolsa também o preço da melhoria. Remover ou trocar melhoria reembolsa a anterior. Recomprar custa o mesmo que o reembolso; não gera dinheiro.
-- Invariante verificável: material ativo + moedas gastas nas melhorias atualmente equipadas + saldo = 51. Ao começar outra partida, tudo recomeça; não há inventário ou saldo persistente.
-- As 15 casas iniciais, exceto a casa do Rei, aceitam qualquer tipo de peça não-Rei, inclusive substituir um peão por uma dama se houver orçamento. Casas podem ficar vazias. Ainda não há posicionamento fora das duas fileiras iniciais.
-- Peão colocado na fileira de trás move normalmente uma casa por vez. O avanço de duas casas só existe na fileira tradicional de peões, antes do primeiro movimento. Recuar não restaura esse direito.
-- O servidor sorteia oito das onze melhorias, incluindo ao menos três para peões e uma para cada outro tipo de peça. Ofertas iguais para os dois lados, sem novos sorteios dentro da sala, sem esgotar estoque entre jogadores. Uma melhoria por peça, sem limite de cópias entre peças distintas.
-- Os exércitos ficam privados até ambos confirmarem. Então há oito segundos de revelação, com consulta a todas as habilidades, antes de começar o relógio.
-- Se as duas montagens produzirem uma posição inicial com algum Rei em xeque, ambas voltam a editar e recebem uma indicação para proteger a coluna do Rei. A partida não começa em estado inválido.
+## Classes, categorias e catálogo atual
 
-## Catálogo inicial
+Armas adicionam opções ao movimento normal. Movimentos sem captura não ameaçam o Rei; capturas adicionais ameaçam casas e contam para xeque, mate e roque. “Frente” e “trás” são relativos à cor da peça. Qualquer lance continua obrigado a deixar o próprio Rei seguro.
 
-Todos os efeitos são passivos: adicionam opções ao movimento normal, cada jogada consome um turno, não há aleatoriedade durante a partida, cooldown ou carga. A jogada precisa deixar o próprio Rei seguro. Efeitos de movimento sem captura não criam ameaças adicionais. Efeitos de captura criam ameaças e entram no cálculo de xeque, mate e roque. “Frente” e “trás” são relativos à cor da peça.
+| Carta | Tipo / raridade | Classe | Custo | Efeito |
+|---|---|---|---:|---|
+| Passo lateral | Arma · comum | Menor | 3 | Move uma casa para o lado, sem capturar. |
+| Retirada | Arma · incomum | Menor | 2 | Move uma casa para trás, sem capturar; não recupera o avanço inicial de duas casas. |
+| Retaguarda | Arma · comum | Menor | 4 | Captura uma casa na diagonal para trás. |
+| Lança | Arma · incomum | Menor | 5 | Captura uma casa diretamente à frente. |
+| Passo firme | Arma · comum | Menor | 4 | Além do salto do cavalo, move uma casa ortogonal sem capturar. |
+| Golpe curto | Arma · incomum | Menor | 5 | Além do salto do cavalo, captura uma casa na diagonal. |
+| Desvio | Arma · comum | Menor | 5 | Move uma casa na horizontal ou vertical, sem capturar. |
+| Duelo | Arma · incomum | Menor | 5 | Também captura uma casa na horizontal ou vertical. |
+| Passo oblíquo | Arma · comum | Maior | 4 | Move uma casa na diagonal, sem capturar. |
+| Flanco | Arma · incomum | Maior | 5 | Também captura uma casa na diagonal. |
+| Salto real | Arma · raro | Maior | 7 | Salta exatamente duas casas ortogonais para destino vazio, ignorando a intermediária; conserva ataques normais. |
+| Cruzada | Arma · comum | Menor | 5 | Também captura uma casa na horizontal ou vertical. |
+| Lâmina diagonal | Arma · comum | Maior | 5 | Também captura uma casa na diagonal. |
+| Isca | Encantamento · raro | Menor ou maior | 7 | Quando a peça é capturada, seu dono escolhe uma entre até três melhorias compatíveis geradas e a aplica de graça a uma peça aliada com espaço disponível. |
+| Segundo coração | Encantamento · lendário | Menor ou maior | 10 | Cancela a primeira captura: a peça permanece no lugar, o atacante não se move e o turno termina. A próxima captura a remove normalmente. |
+| Instante extra | Feitiço · raro | Menor ou maior | 7 | No próprio turno, adiciona 30 segundos uma vez, sem consumir o lance. Só existe para a partida atual. |
 
-| Habilidade | Peça | Moedas | Efeito adicional |
-|---|---|---:|---|
-| Passo lateral | Peão | 3 | Move uma casa para um dos lados, sem captura. |
-| Retirada | Peão | 2 | Move uma casa para trás, sem captura; não recupera avanço inicial. |
-| Retaguarda | Peão | 4 | Captura uma casa na diagonal para trás. |
-| Lança | Peão | 5 | Captura uma casa diretamente à frente. |
-| Passo firme | Cavalo | 4 | Move uma casa ortogonal, sem captura. |
-| Golpe curto | Cavalo | 5 | Captura uma casa diagonal. |
-| Desvio | Bispo | 5 | Move uma casa ortogonal, sem captura; permite trocar de cor de casa. |
-| Duelo | Bispo | 5 | Captura uma casa ortogonal. |
-| Passo oblíquo | Torre | 4 | Move uma casa diagonal, sem captura. |
-| Flanco | Torre | 5 | Captura uma casa diagonal. |
-| Salto real | Dama | 7 | Salta exatamente duas casas ortogonais para destino vazio, ignorando a casa intermediária. Após mover, mantém seus ataques normais. |
+As raridades são comum (prata), incomum (azul), raro (ouro) e lendário (âmbar alaranjado). A carta inteira assume essa paleta, com entrada luminosa; raras/lendárias mantêm aura discreta. Os selos de melhoria na peça usam a mesma cor, ficam empilhados na vertical e têm moldura metálica, halo discreto e reflexo lento. Movimento reduzido elimina animações decorativas. Aparência não altera regras nem pausa ações.
 
-Na promoção, a melhoria do peão é removida e ele se torna dama, torre, bispo ou cavalo tradicional, à escolha do jogador. Não há reembolso durante a partida. Melhorias não concedem invulnerabilidade, segunda vida ou movimento extra do Rei nesta etapa.
+Dois exemplos das anotações originais não viraram cartas: o ataque vertical de uma casa já existe para torre e dama no xadrez tradicional; e o Feitiço de aumentar o limite de peças não tem valor/condição definido. O catálogo atual não inclui essas cartas sem efeito ou sem regra fechada. Isca seleciona até três opções compatíveis aleatórias na ativação, para tornar “escolher uma entre três” uma escolha clara; a partida segue determinística depois da escolha.
 
-## Partida, relógio e encerramento
+Ao promover, o peão vira dama, torre, bispo ou cavalo tradicional e perde Arma, Encantamento e vida extra, sem reembolso durante a partida. Rei nunca pode ser capturado.
 
-- Brancas começam; o servidor sorteia as cores. Ambos têm 600.000 ms; não há incremento, delay ou limite adicional por lance.
-- Roque exige Rei/torre nas casas convencionais e ainda não movidos, caminho livre e casas do Rei sem ameaça, inclusive ameaças de melhorias. Um roque não remove a melhoria da torre.
-- En passant mantém a regra tradicional: apenas imediatamente após avanço de duas casas. Capturas extras de habilidades não ganham en passant.
-- Vitória por mate, desistência, tempo ou abandono. Reis nunca são capturados.
-- Empate por acordo, afogamento e material insuficiente reconhecido. A análise de material é conservadora na presença de habilidades: não declarar empate usando apenas uma tabela do xadrez clássico.
-- Reivindicações de repetição tripla/50 lances são aceitas no turno do reclamante quando já atingidas. Não há ainda reivindicação baseada em um lance anunciado antes de jogá-lo. Repetição quíntupla e 75 lances são automáticas, com mate tendo precedência.
-- A identidade da posição considera movimentos/ataques das habilidades, direitos de roque, direito efetivo de en passant, avanço inicial dos peões e lado a jogar. Relógios e IDs internos de peças não contam como diferença posicional.
-- Por tempo, vence o adversário, exceto se tiver só Rei ou a posição tiver material insuficiente reconhecido. Detecção completa de toda posição morta de uma variante permanece uma limitação do protótipo.
-- Desconexão dá até 60 segundos para reconectar; relógio segue. Abandono durante montagem cancela a preparação; durante revelação/partida concede vitória ao adversário. Resultado final é imutável.
-- Uma sala sem concluir preparação expira após 20 minutos. A duração ideal da preparação ainda será medida e ajustada.
+## Modos, partida e encerramento
 
-## O que esta entrega implementa
+- Há partida casual e sala privada com código. Não há ranqueado ou IA adversária nesta etapa.
+- As montagens ficam ocultas até os dois jogadores confirmarem. Então há oito segundos de revelação sem relógio, para consultar os exércitos antes de jogar.
+- O servidor sorteia as cores e as brancas começam. Cada lado tem 10 minutos, sem acréscimo ou limite separado por lance.
+- Roque exige as casas convencionais, Rei e torre não movidos, caminho livre e casas do Rei sem ataque, inclusive por Armas. En passant segue a regra tradicional e só existe imediatamente após um peão andar duas casas.
+- Vitórias: xeque-mate, tempo, desistência ou abandono. Empates: acordo, afogamento, material insuficiente reconhecido, reivindicação de repetição tripla ou 50 lances, repetição quíntupla automática ou 75 lances sem captura/movimento de peão. Mate prevalece sobre 75 lances.
+- Ao esgotar o tempo, o oponente vence exceto se não tiver material reconhecido para dar mate. A detecção de posições mortas em todas as variantes continua conservadora.
+- Desconexão concede até 60 segundos para reconectar e o relógio continua. Abandono durante preparação cancela a sala; durante partida concede vitória ao adversário. Preparação sem conclusão expira após 20 minutos.
+- Em Isca, a partida aguarda a escolha do dono antes de aceitar outro lance ou operação de empate; desistir continua permitido. O efeito pode evitar um mate que a captura teria causado.
 
-Uma etapa vertical jogável com interface, preparação, sala privada, pareamento casual, motor autoritativo, relógios e reconexão. Catálogo, estado e resultados das salas estão na memória do servidor. O nome Gambito é provisório.
+## Estado do projeto
 
-Contas, PostgreSQL, persistência de eventos/resultados, recuperação após queda do processo, ranqueado, matchmaking por nível, recompensa pós-partida e painel de balanceamento serão implementados nas próximas etapas. A proposta antiga de moedas cosméticas não foi adotada automaticamente. Esta versão usa apenas moedas temporárias de preparação.
+Salas, compras, cartas, relógios e resultados são temporários e mantidos em memória no servidor. Não há conta, PostgreSQL, ranking, recompensa pós-partida, saldo acumulado nem cosméticos. O histórico de implementação registra a ordem das mudanças; este documento descreve somente as regras atuais.
 
-## Questão de duração a acompanhar
-
-10+0 pode consumir quase 20 minutos por partida, além da montagem. Uma série de três pode aproximar-se de uma hora. Antes de adotar melhor de três, medir preparação, duração real, abandono e desejo de revanche; comparar alternativas como relógio menor opcional, duas rodadas com cores alternadas ou manutenção de uma formação por uma sessão curta. Nenhuma série é obrigatória agora.
+Uma partida pode chegar a quase 20 minutos somando os dois relógios. Melhor de três permanece adiado até medir duração real, preparação, abandono e interesse em revanche.

@@ -1,29 +1,33 @@
+
 # Gambito — nome provisório
 
 Primeira etapa jogável de um xadrez online com montagem de exércitos e loja aleatória de melhorias. Interface em português, responsiva, com partidas únicas de 10 minutos por jogador, sem acréscimo.
 
-**Andamento:** protótipo local jogável. A direção visual de [design-do-jogo.md](docs/design-do-jogo.md) foi aplicada à entrada, preparação e partida. As regras continuam as do protótipo; a nova loja de cinco ofertas, raridades, posicionamento avançado, conta e cosméticos ainda não existem. Após a correção da inicialização, a conexão com a loja foi verificada no navegador; typecheck e os 15 testes automatizados passaram.
+**Andamento:** protótipo local com preparação avançada, cinco ofertas, classes de peças, armas, encantamentos, feitiços, quatro raridades e validação autoritativa no servidor. A direção visual de [design-do-jogo.md](docs/design-do-jogo.md) está aplicada. Esta versão continua sem conta, saldo persistente, ranking, recompensas pós-partida, PostgreSQL ou cosméticos. A etapa `nextmoves` foi implementada, mas não foi verificada com testes ou inspeção visual nesta alteração.
 
 ## Documentação do projeto
 
-- [Direção de design do jogo](docs/design-do-jogo.md): especificação visual de referência para tabuleiro preto/branco, peças, telas, cartas, animações e cosméticos futuros. Aplicada à interface atual; as decisões para regras que ainda não existem seguem adiadas.
-- [Próximas regras desejadas](docs/nextmoves.md): anotações do usuário sobre poder, classes, raridades, feitiços, posicionamento e loja. O guia de design distingue essas intenções do comportamento atual e identifica as decisões ainda abertas.
+- [Direção de design do jogo](docs/design-do-jogo.md): especificação visual de referência para tabuleiro preto/branco, peças, telas, cartas, animações e cosméticos futuros. Aplicada à interface atual; cosméticos continuam adiados.
+- [Próximas regras desejadas](docs/nextmoves.md): anotações originais do usuário. As decisões aplicadas e as regras que não entraram no catálogo estão documentadas em [regras atuais](docs/regras-prototipo.md).
 - [Registro da implementação](docs/implementacao.md): o que foi feito, arquivos criados, decisões provisórias, arquitetura atual, histórico de verificações e pendências.
 - [Regras atuais](docs/regras-prototipo.md): economia temporária, loja, habilidades, sacrifícios, relógio e condições de encerramento.
 - [Proposta inicial](docs/plano-mvp.md): os 15 entregáveis de planejamento, preservados como histórico; recomendações conflitantes foram substituídas pelas regras atuais.
 
-A documentação distingue decisões expressas do usuário de parâmetros escolhidos provisoriamente durante a implementação. Doze moedas iniciais, oito ofertas e os preços das habilidades são exemplos de parâmetros provisórios.
+A documentação distingue decisões expressas do usuário de parâmetros escolhidos provisoriamente durante a implementação. Doze moedas iniciais, teto de 50 de Poder, preço de cartas e custo crescente para atualizar a loja são parâmetros iniciais para balancear.
 
 ## O que já funciona
 
 - Sala privada por código/convite e pareamento casual entre duas pessoas.
-- 39 pontos de material, 12 moedas iniciais, recrutamento e sacrifício de peças, incluindo peões.
-- Oito ofertas sorteadas de um catálogo de onze melhorias. Os dois jogadores recebem a mesma loja. Uma melhoria por peça; diferentes peças podem receber a mesma melhoria.
+- 39 pontos de material, 12 moedas iniciais, Poder máximo 50, recrutamento, reposicionamento e sacrifício de peças, incluindo peões.
+- Cinco ofertas geradas de um catálogo com 16 Armas, Encantamentos e Feitiços. Ambos recebem a mesma loja inicial; compras repõem o espaço individualmente e atualizar o mercado custa 1, 2, 3… moedas.
+- Compatibilidade por classe: peças menores (peão, cavalo, bispo) e maiores (torre, dama). Cada peça pode combinar uma Arma e um Encantamento; Feitiços ficam na reserva da sala.
+- Raridades comum, incomum, raro e lendário, com animação breve em cartas raras e lendárias; movimento reduzido desativa o efeito.
+- Preparação em quatro fileiras próprias, com custo de 2 Poder por peça nas duas fileiras avançadas.
 - Montagens privadas, revisão do exército e revelação simultânea de oito segundos.
 - Servidor Colyseus validando todas as mudanças de orçamento, jogadas, habilidades e resultados.
 - Movimentos tradicionais, roque, en passant, promoção, xeque/mate, empates, desistência, relógios e reconexão por até 60 segundos.
 - Interface por clique/toque, indicação de movimentos legais, consulta às melhorias do adversário e registro de lances da sala.
-- Direção visual monumental aplicada: tabuleiro preto/branco, peças com acabamento de porcelana/obsidiana, diagramas para as oito melhorias reais, orçamento, confirmação de sacrifício e layouts responsivos.
+- Direção visual monumental aplicada: tabuleiro preto/branco, peças com acabamento de porcelana/obsidiana, diagramas de melhorias, orçamento, confirmação de sacrifício e layouts responsivos.
 
 **Esta etapa é um protótipo local.** Não há contas, ranking, moeda acumulada, PostgreSQL integrado nem recuperação após reiniciar o servidor. Salas e resultados ficam em memória. O pareamento casual junta dois jogadores disponíveis; ainda não estima nível. Para jogar pela internet será necessário hospedar a interface e o servidor com HTTPS/WSS.
 
@@ -52,19 +56,17 @@ PATH=/home/valeria/.cache/codex-runtimes/codex-primary-runtime/dependencies/node
 
 Para conferir no celular na mesma rede, abra `http://IP-DO-COMPUTADOR:3000` e mantenha as portas web/partidas acessíveis na rede local. Em desenvolvimento, localhost e endereços privados de rede são aceitos; em produção, as origens precisam estar em `ALLOWED_ORIGINS`. O cliente usa automaticamente o mesmo nome de host para o servidor. Para hosts distintos, defina `NEXT_PUBLIC_GAME_SERVER_URL` antes de compilar a interface.
 
-## Roteiro de verificação para uma retomada
-
-Não executar agora. Este roteiro foi preparado antes do pedido de interromper os testes.
+## Roteiro manual de preparação
 
 1. Abra duas abas independentes. Na primeira, informe um apelido e crie uma sala. Na segunda, use outro apelido e o código exibido na sala.
-2. Selecione um peão na primeira aba e equipe uma melhoria compatível. O saldo diminui pelo preço da oferta. Selecione outro peão e sacrifique: o material cai em um ponto e o saldo sobe em uma moeda.
-3. Confira que as oito ofertas são iguais nas duas abas e que o exército do adversário fica escondido durante a montagem.
-4. Clique em **Revisar exército** e **Confirmar exército** nas duas abas. Depois de oito segundos de revelação, começa o relógio das brancas.
-5. Mova peças por clique/toque. Apenas o jogador da vez pode jogar; o relógio não ganha segundos após um lance. Consulte as habilidades selecionando peças.
-6. Recarregue uma aba durante a partida: ela deve recuperar a sala e o estado. O relógio continua. A sessão de reconexão pertence à aba; para o segundo jogador, abra uma aba nova em vez de duplicar uma partida em andamento.
-7. Proponha e aceite empate, ou desista. O resultado aparece em ambas as abas e bloqueia novas jogadas. Uma nova sala recomeça com 39 pontos e 12 moedas.
+2. Na preparação, confira as cinco ofertas, os valores Material / Poder / Ouro e as casas avançadas. Mova uma peça, depois selecione um peão e equipe uma melhoria compatível; o servidor atualiza orçamento e poder. Sacrifique outro peão e confira o reembolso.
+3. Compare as duas abas: a loja inicial deve ser igual e os exércitos devem ficar ocultos durante a montagem. Compre uma oferta em uma aba e confirme que apenas o espaço daquela pessoa é reposto.
+4. Atualize a loja e confira o custo crescente. Se possível, compre um Feitiço e use-o no próprio turno durante a partida.
+5. Clique em **Revisar exército** e **Confirmar exército** nas duas abas. Depois de oito segundos de revelação, começa o relógio das brancas.
+6. Mova peças por clique/toque. Apenas o jogador da vez pode jogar; o relógio não ganha segundos após um lance. Consulte habilidades e tente resolver Isca se ela for ativada.
+7. Recarregue uma aba durante a partida: deve recuperar a sala e o estado. O relógio continua. Proponha e aceite empate, ou desista. Uma nova sala começa com 39 pontos e 12 moedas.
 
-Os relógios dão até cerca de 20 minutos por partida, somados os dois lados. A preparação tem um limite de 20 minutos neste protótipo para evitar salas esquecidas; esse limite não representa a duração casual pretendida e será ajustado com o uso. Os 15 testes automatizados e o typecheck passaram em 28/09/2026; a conexão, compra de melhoria e resposta do servidor foram verificadas no navegador local.
+Os relógios dão até cerca de 20 minutos por partida, somados os dois lados. A preparação tem um limite de 20 minutos neste protótipo para evitar salas esquecidas; esse limite não representa a duração casual pretendida e será ajustado com o uso. As verificações feitas em etapas anteriores estão registradas em [implementacao.md](docs/implementacao.md); não foram repetidas após as regras `nextmoves`.
 
 ## Comandos de verificação disponíveis para depois
 
@@ -76,7 +78,7 @@ npm test
 npm run build
 ```
 
-Os testes cobrem regras tradicionais comparadas com `chess.js` em partidas geradas, as onze melhorias, orçamento, sacrifícios, promoção, xeque, roque, en passant e relógio. Um teste abre um servidor e conecta dois clientes reais para verificar preparação privada, ofertas iguais, comandos inválidos, reconexão e encerramento. Ele usa uma porta local temporária e dura aproximadamente 10 segundos.
+Os testes mantidos no repositório cobrem o motor e o orçamento, categorias e atualizações da loja, sacrifício, habilidades e uma sala online com dois clientes. As mudanças recentes ainda não foram executadas nessa suíte.
 
 ## Organização
 
@@ -92,7 +94,7 @@ O motor é próprio porque as habilidades alteram também ameaças, xeque e movi
 
 ## Etapas posteriores — ainda não iniciadas
 
-1. Revisar a documentação e as hipóteses de economia e preparação. Quando a verificação for retomada, experimentar o fluxo e ajustar dinheiro inicial, ofertas e preços com partidas humanas; medir tempo de preparação e duração.
+1. Verificar a nova preparação completa e, com partidas humanas, ajustar dinheiro inicial, ofertas, classes, preços, limite de Poder e posições avançadas.
 2. Integrar PostgreSQL: contas, snapshots, eventos, histórico e encerramento idempotente; recuperar salas após falha do servidor.
 3. Implementar autenticação e ranqueado com validação de versão/catálogo, Elo inicial e fila por nível.
 4. Registrar métricas por habilidade, composição, cor, nível e versão; revisar balanceamento antes de abrir o ranqueado.

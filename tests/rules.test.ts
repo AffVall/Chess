@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Chess } from 'chess.js';
-import { ABILITIES, CLOCK_MS, generateShop } from '../lib/catalog';
-import { applyDraftAction, createDraft, material, squareName, validateDraft } from '../lib/draft';
+import { abilityById, ABILITIES, CLOCK_MS, generateShop, POWER_CAP, SHOP_SIZE } from '../lib/catalog';
+import { advancedCost, applyBait, applyDraftAction, createDraft, material, powerScore, squareName, validateDraft } from '../lib/draft';
 import { attacked, canClaimDraw, createGame, gameResult, inCheck, legalMoves, makeMove, positionKey } from '../lib/chess';
 import { MatchClock } from '../lib/clock';
 import type { Board, Game, Piece } from '../lib/types';
@@ -12,8 +12,11 @@ const sq = (name: string) => 'abcdefgh'.indexOf(name[0]) + (Number(name[1]) - 1)
 const initial = () => createGame(createDraft('w'), createDraft('b'));
 function position(pieces: [string, Kind, Color, string?][], turn: Color = 'w'): Game {
   const board: Board = Array(64).fill(null);
-  for (const [square, kind, color, ability] of pieces) board[sq(square)] = { id: square, kind, color, moved: false, ...(ability ? { ability } : {}) };
-  const g: Game = { board, turn, ply: 0, halfmove: 0, enPassant: null, lastMove: null, repetitions: {} };
+  for (const [square, kind, color, id] of pieces) {
+    const ability = abilityById(id);
+    board[sq(square)] = { id: square, kind, color, moved: false, ...(ability?.type === 'weapon' ? { weapon: id } : {}), ...(ability?.type === 'enchantment' ? { enchantment: id, ...(ability.trigger === 'second-heart' ? { heart: true } : {}) } : {}) };
+  }
+  const g: Game = { board, turn, ply: 0, halfmove: 0, enPassant: null, lastMove: null, repetitions: {}, spells: { w: [], b: [] } };
   g.repetitions[positionKey(g)] = 1;
   return g;
 }
@@ -61,14 +64,48 @@ test('pawn replacements and upgrades are allowed; king, enemy zone, unavailable 
   assert.throws(() => applyDraftAction(draft, 'w', all, { type: 'recruit', square: sq('a7'), kind: 'p' }), /casas/);
   assert.throws(() => applyDraftAction(draft, 'w', [], { type: 'equip', square: sq('b2'), ability: 'spear' }), /não disponível/);
   assert.throws(() => applyDraftAction({ ...draft, ready: true }, 'w', all, { type: 'sacrifice', square: sq('b2') }), /confirmação/);
-  assert.throws(() => applyDraftAction(draft, 'w', all, { type: 'equip', square: sq('b1'), ability: 'spear' }), /não disponível/);
+  assert.throws(() => applyDraftAction(draft, 'w', all, { type: 'equip', square: sq('b1'), ability: 'rook-step' }), /classe/);
 });
-test('shop always offers eight distinct items and broad piece coverage', () => {
+test('advanced deployment costs two power points per piece and the power cap is authoritative', () => {
+  let draft = createDraft('w');
+  for (const [from, to] of [['a2', 'a3'], ['b2', 'b3'], ['c2', 'c3'], ['d2', 'd3'], ['f2', 'f3']]) draft = applyDraftAction(draft, 'w', all, { type: 'movePiece', from: sq(from), to: sq(to) });
+  assert.equal(advancedCost(draft.board, 'w'), 10);
+  assert.equal(powerScore(draft, 'w'), 49);
+  assert.throws(() => applyDraftAction(draft, 'w', all, { type: 'movePiece', from: sq('g2'), to: sq('g3') }), new RegExp(String(POWER_CAP)));
+  assert.equal(draft.board[sq('g2')]?.kind, 'p');
+});
+test('weapons and enchantments occupy separate slots; bait adds a free compatible improvement', () => {
+  let draft = createDraft('w');
+  draft = applyDraftAction(draft, 'w', all, { type: 'sacrifice', square: sq('h2') });
+  draft = applyDraftAction(draft, 'w', all, { type: 'equip', square: sq('a2'), ability: 'spear' });
+  draft = applyDraftAction(draft, 'w', all, { type: 'equip', square: sq('a2'), ability: 'bait' });
+  assert.equal(draft.board[sq('a2')]?.weapon, 'spear');
+  assert.equal(draft.board[sq('a2')]?.enchantment, 'bait');
+  assert.equal(powerScore(draft, 'w'), 50);
+  const next = applyBait(draft, 'w', sq('b2'), 'retreat', ['retreat']);
+  assert.equal(next.board[sq('b2')]?.weapon, 'retreat');
+  assert.equal(draft.board[sq('b2')]?.weapon, undefined);
+});
+test('spell purchases contribute to power and can only be prepared once', () => {
+  const draft = applyDraftAction(createDraft('w'), 'w', all, { type: 'buySpell', ability: 'time-spark' });
+  assert.deepEqual(draft.spells, ['time-spark']);
+  assert.equal(draft.gold, 5);
+  assert.equal(powerScore(draft, 'w'), 46);
+  assert.throws(() => applyDraftAction(draft, 'w', all, { type: 'buySpell', ability: 'time-spark' }), /mais de uma vez|disponível/);
+});
+test('shop always offers five distinct items with categories and both piece classes represented', () => {
   for (let i = 0; i < 50; i++) {
     const shop = generateShop(Math.random);
-    assert.equal(new Set(shop).size, 8);
-    assert.ok(shop.filter(id => ABILITIES.find(a => a.id === id)!.kinds.includes('p')).length >= 3);
-    for (const kind of ['p', 'n', 'b', 'r', 'q'] as Kind[]) assert.ok(shop.some(id => ABILITIES.find(a => a.id === id)!.kinds.includes(kind)));
+    assert.equal(shop.length, SHOP_SIZE);
+    assert.equal(new Set(shop).size, SHOP_SIZE);
+    for (const category of ['weapon', 'enchantment', 'spell']) assert.ok(shop.some(id => ABILITIES.find(a => a.id === id)!.type === category));
+    for (const pieceClass of ['minor', 'major']) assert.ok(shop.some(id => ABILITIES.find(a => a.id === id)!.classes.includes(pieceClass as 'minor' | 'major')));
+    assert.ok(shop.some(id => { const a = ABILITIES.find(item => item.id === id)!; return a.type === 'weapon' && a.classes.includes('minor'); }));
+    assert.ok(shop.some(id => { const a = ABILITIES.find(item => item.id === id)!; return a.type === 'weapon' && a.classes.includes('major'); }));
+    const rerolled = generateShop(Math.random, shop);
+    assert.equal(rerolled.length, SHOP_SIZE);
+    assert.equal(new Set(rerolled).size, SHOP_SIZE);
+    assert.ok(rerolled.every(id => !shop.includes(id)));
   }
 });
 test('capture powers contribute to check and non-capturing powers do not', () => {
@@ -79,9 +116,20 @@ test('capture powers contribute to check and non-capturing powers do not', () =>
   assert.equal(attacked(step.board, sq('f4'), 'w'), false);
   assert.equal(legalMoves(step).some(m => m.from === sq('e4') && m.to === sq('f4')), false);
 });
+test("second heart cancels its first capture and consumes the attacker's turn", () => {
+  const game = position([['a1', 'k', 'w'], ['e4', 'p', 'w', 'second-heart'], ['h8', 'k', 'b'], ['e5', 'r', 'b']], 'b');
+  const next = go(game, 'e5', 'e4');
+  assert.equal(next.board[sq('e4')]?.kind, 'p');
+  assert.equal(next.board[sq('e4')]?.heart, false);
+  assert.equal(next.board[sq('e5')]?.kind, 'r');
+  assert.equal(next.turn, 'w');
+  assert.equal(next.lastMove?.defended, true);
+});
 test('all offered effects work in both orientations, and movement-only effects cannot capture', () => {
   for (const ability of ABILITIES) for (const color of ['w', 'b'] as Color[]) {
-    const game = position([['a1', 'k', 'w'], ['h8', 'k', 'b'], ['d4', ability.kinds[0], color, ability.id]], color);
+    if (ability.type !== 'weapon') continue;
+    const kind = ability.classes.includes('minor') ? 'p' : 'r';
+    const game = position([['a1', 'k', 'w'], ['h8', 'k', 'b'], ['d4', kind, color, ability.id]], color);
     for (const [dx, dy] of ability.moves ?? []) {
       const destination = sq('d4') + dx + dy * 8 * (color === 'w' ? 1 : -1);
       assert.ok(legalMoves(game).some(m => m.from === sq('d4') && m.to === destination), `${ability.id} ${color}`);
@@ -122,14 +170,15 @@ test('promotion requires a choice and removes the pawn power', () => {
   assert.throws(() => go(game, 'e7', 'e8'));
   const promoted = go(game, 'e7', 'e8', 'n');
   assert.equal(promoted.board[sq('e8')]?.kind, 'n');
-  assert.equal(promoted.board[sq('e8')]?.ability, undefined);
+  assert.equal(promoted.board[sq('e8')]?.weapon, undefined);
+  assert.equal(promoted.board[sq('e8')]?.enchantment, undefined);
 });
 test('retreat does not renew a pawn double step, and abilities are part of repetition identity', () => {
   const game = position([['a1', 'k', 'w'], ['e2', 'p', 'w', 'retreat'], ['h8', 'k', 'b']]);
   game.board[sq('e2')]!.moved = true;
   assert.equal(legalMoves(game).some(m => m.from === sq('e2') && m.to === sq('e4')), false);
   const plain = structuredClone(game);
-  delete plain.board[sq('e2')]!.ability;
+  delete plain.board[sq('e2')]!.weapon;
   assert.notEqual(positionKey(game), positionKey(plain));
 });
 test('mate, stalemate, repetition claims and automatic repetition use the full state', () => {

@@ -1,8 +1,8 @@
 'use client';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Client, type Room } from '@colyseus/sdk';
-import { abilityById, MATERIAL_CAP, NAMES, STARTING_GOLD, VALUES, type Color } from '@/lib/catalog';
-import { createDraft, inHome, material, other, spentOnAbilities, squareName } from '@/lib/draft';
+import { abilityById, classForKind, MATERIAL_CAP, NAMES, POWER_CAP, STARTING_GOLD, VALUES, type AbilityType, type Color } from '@/lib/catalog';
+import { advancedCost, advancedPieces, createDraft, inHome, material, other, powerScore, spentOnAbilities, spentOnSpells, squareName } from '@/lib/draft';
 import { inCheck } from '@/lib/chess';
 import type { DraftAction, Move, Snapshot } from '@/lib/types';
 import { Board } from './Board';
@@ -42,8 +42,8 @@ function clockLabel(ms: number) {
   return `${Math.floor(seconds / 60).toString().padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}`;
 }
 const demo = createDraft('w').board.map((p, square) => p ?? createDraft('b').board[square]);
-demo[12] = { ...demo[12]!, ability: 'spear' };
-demo[1] = { ...demo[1]!, ability: 'knight-step' };
+demo[12] = { ...demo[12]!, weapon: 'spear' };
+demo[1] = { ...demo[1]!, weapon: 'knight-step' };
 
 export default function GameApp({ gamePort }: { gamePort: string }) {
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
@@ -53,13 +53,15 @@ export default function GameApp({ gamePort }: { gamePort: string }) {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [selected, setSelected] = useState<number | null>(null);
-  const [modal, setModal] = useState<'rules' | 'review' | 'leave' | 'resign' | 'piece' | null>(null);
+  const [modal, setModal] = useState<'rules' | 'review' | 'leave' | 'resign' | 'piece' | 'bait' | null>(null);
   const [wantedOffer, setWantedOffer] = useState<string | null>(null);
   const [draftPending, setDraftPending] = useState(false);
   const draftPendingRef = useRef(false);
   const [lastConnect, setLastConnect] = useState<'friends' | 'casual' | 'join' | null>(null);
   const [resumeToken, setResumeToken] = useState<string | null>(null);
   const [promotion, setPromotion] = useState<Move[] | null>(null);
+  const [baitAbility, setBaitAbility] = useState('');
+  const [baitSquare, setBaitSquare] = useState<number | null>(null);
   const [now, setNow] = useState(0);
   const roomRef = useRef<Room | null>(null);
   const initialized = useRef(false);
@@ -165,24 +167,31 @@ export default function GameApp({ gamePort }: { gamePort: string }) {
     catch { setNotice(`Compartilhe o código ${snapshot.roomId}.`); }
   }
   function play(move: Move) {
-    send('move', { from: move.from, to: move.to, ...(move.promotion ? { promotion: move.promotion } : {}), ply: snapshot!.game!.ply });
+    if (move.spell) send('castSpell', { spell: move.spell, from: move.from, to: move.to, ply: snapshot!.game!.ply });
+    else send('move', { from: move.from, to: move.to, ...(move.promotion ? { promotion: move.promotion } : {}), ply: snapshot!.game!.ply });
     setSelected(null); setPromotion(null);
   }
   function selectSquare(square: number) {
     if (!snapshot) return;
     if (snapshot.phase === 'preparation') {
       if (!inHome(square, snapshot.you)) return;
-      setSelected(square);
+      if (selected !== null && selected !== square && snapshot.draft.board[selected] && !snapshot.draft.board[square] && editable) {
+        draftAction({ type: 'movePiece', from: selected, to: square });
+        setSelected(null);
+        return;
+      }
       const ability = abilityById(wantedOffer ?? undefined);
+      if (selected === square && !ability) { setSelected(null); return; }
+      setSelected(square);
       if (ability) {
         const target = snapshot.draft.board[square];
-        if (!target || !ability.kinds.includes(target.kind)) { setNotice('Escolha uma peça compatível com esta melhoria.'); return; }
+        if (ability.type === 'spell' || !target || !classForKind(target.kind) || !ability.classes.includes(classForKind(target.kind)!)) { setNotice('Escolha uma peça compatível com esta melhoria.'); return; }
         setWantedOffer(null);
         requestAnimationFrame(() => { const offer = document.getElementById(`offer-${ability.id}`); offer?.scrollIntoView({ block: 'nearest', inline: 'center' }); offer?.focus({ preventScroll: true }); });
       }
       return;
     }
-    const targets = snapshot.legalMoves.filter(m => m.from === selected && m.to === square);
+    const targets = [...snapshot.legalMoves, ...snapshot.spellMoves].filter(m => m.from === selected && m.to === square);
     if (targets.length && connection === 'connected') {
       if (targets.some(m => m.promotion)) setPromotion(targets);
       else play(targets[0]);
@@ -192,14 +201,15 @@ export default function GameApp({ gamePort }: { gamePort: string }) {
   const preparing = snapshot?.phase === 'preparation';
   const board = snapshot ? preparing || !snapshot.game ? snapshot.draft.board : snapshot.game.board : demo;
   const selectedPiece = selected !== null ? board[selected] : null;
-  const selectedAbility = abilityById(selectedPiece?.ability);
+  const selectedWeapon = abilityById(selectedPiece?.weapon), selectedEnchantment = abilityById(selectedPiece?.enchantment);
   const editable = !!snapshot && preparing && !snapshot.draft.ready && connection === 'connected' && !draftPending;
   const opponent = snapshot?.players.find(p => p.color !== snapshot.you);
   const self = snapshot?.players.find(p => p.color === snapshot.you);
   const spent = snapshot ? material(snapshot.draft.board) : 39;
   const checked = snapshot?.game && inCheck(snapshot.game.board, snapshot.game.turn) ? snapshot.game.board.findIndex(p => p?.kind === 'k' && p.color === snapshot.game!.turn) : undefined;
   const offers = (snapshot?.shop ?? []).map(id => abilityById(id)!).filter(Boolean);
-  const refund = selectedPiece ? VALUES[selectedPiece.kind] + (selectedAbility?.price ?? 0) : 0;
+  const highlightMoves = snapshot ? [...snapshot.legalMoves, ...snapshot.spellMoves] : [];
+  const refund = selectedPiece ? VALUES[selectedPiece.kind] + (selectedWeapon?.price ?? 0) + (selectedEnchantment?.price ?? 0) : 0;
   const resultTitle = snapshot?.result ? snapshot.result.winner === null ? 'Empate no tabuleiro.' : snapshot.result.winner === snapshot.you ? 'A vitória é sua.' : 'Uma nova chance vem aí.' : '';
   const readyForInput = connection === 'connected' && !draftPending;
   const checkMessage = snapshot?.game?.turn === snapshot?.you ? 'Seu Rei está em xeque.' : 'Rei adversário em xeque.';
@@ -207,7 +217,7 @@ export default function GameApp({ gamePort }: { gamePort: string }) {
     if (window.matchMedia('(max-width: 850px)').matches) setModal('piece');
     else { document.getElementById('piece-inspector')?.scrollIntoView({ block: 'nearest' }); document.getElementById('piece-inspector')?.focus({ preventScroll: true }); }
   };
-  const inspector = snapshot && <PieceInspector key={`${selected}-${selectedPiece?.id}-${selectedPiece?.ability ?? ''}`} selected={selected} piece={selectedPiece} color={snapshot.you} editable={editable} refund={refund} onRecruit={kind => selected !== null && draftAction({ type: 'recruit', square: selected, kind })} onSacrifice={() => selected !== null && draftAction({ type: 'sacrifice', square: selected })} onUnequip={() => selected !== null && draftAction({ type: 'unequip', square: selected })} spent={spent} materialCap={MATERIAL_CAP} canAffordGold={snapshot.draft.gold + refund}/>;
+  const inspector = snapshot && <PieceInspector key={`${selected}-${selectedPiece?.id}-${selectedPiece?.weapon ?? ''}-${selectedPiece?.enchantment ?? ''}`} selected={selected} piece={selectedPiece} color={snapshot.you} editable={editable} refund={refund} onRecruit={kind => selected !== null && draftAction({ type: 'recruit', square: selected, kind })} onSacrifice={() => selected !== null && draftAction({ type: 'sacrifice', square: selected })} onUnequip={slot => selected !== null && draftAction({ type: 'unequip', square: selected, slot })} spent={spent} materialCap={MATERIAL_CAP} canAffordGold={snapshot.draft.gold + refund}/>;
   function chooseOffer(id: string) {
     setWantedOffer(id); setModal(null);
     document.getElementById('army')?.scrollIntoView({ block: 'start' });
@@ -215,6 +225,20 @@ export default function GameApp({ gamePort }: { gamePort: string }) {
     first?.focus({ preventScroll: true });
   }
   useEffect(() => { if (snapshot?.phase !== 'preparation') { setWantedOffer(null); setModal(value => value === 'piece' ? null : value); } }, [snapshot?.phase]);
+  const pendingBaitKey = snapshot?.pendingBait?.choices.join('|') ?? '';
+  useEffect(() => {
+    if (!snapshot?.pendingBait) { setBaitAbility(''); setBaitSquare(null); if (modal === 'bait') setModal(null); return; }
+    setBaitAbility(snapshot.pendingBait.choices[0] ?? '');
+    setBaitSquare(null);
+    setModal('bait');
+  }, [pendingBaitKey]);
+  const baitTargets = snapshot?.pendingBait && snapshot.game ? snapshot.game.board.flatMap((piece, square) => {
+    const ability = abilityById(baitAbility), pieceClass = classForKind(piece?.kind);
+    if (!piece || piece.color !== snapshot.you || !pieceClass || !ability || !ability.classes.includes(pieceClass)) return [];
+    if (ability.type === 'weapon' ? piece.weapon : ability.type === 'enchantment' ? piece.enchantment : true) return [];
+    return [{ square, name: `${NAMES[piece.kind]} em ${squareName(square)}` }];
+  }) : [];
+  const resolvedBaitSquare = baitTargets.some(target => target.square === baitSquare) ? baitSquare : baitTargets[0]?.square ?? null;
 
   return <div className={`app-shell ${snapshot && !preparing ? 'match-shell' : ''} ${modal || promotion ? 'has-dialog' : ''}`}>
     <header className="topbar">
@@ -232,17 +256,16 @@ export default function GameApp({ gamePort }: { gamePort: string }) {
     {!snapshot ? <main className="landing">
       <section className="hero-copy">
 
-        <h1>A partida começa antes do primeiro lance.</h1>
-        <p className="hero-description">Monte seu exército. Escolha como cada peça pode surpreender. Depois, enfrente outro jogador em uma partida de xadrez.</p>
+        <h1>Sua formação muda a partida.</h1>
+        <p className="hero-description">Escolha as peças e melhorias do seu exército. Depois, entre numa partida de xadrez online.</p>
         <p className="session-facts">Partida única · 10 minutos por jogador, sem acréscimo</p>
         <section className="lobby-card" aria-label="Entrar em uma partida">
-          <div className="section-title"><h2>Encontre sua partida</h2><span className="little-label">1 contra 1</span></div>
+          <div className="section-title"><h2>Encontre sua partida</h2></div>
           <label htmlFor="nickname">Seu apelido</label>
           <input id="nickname" value={name} onChange={event => setName(event.target.value)} maxLength={24} placeholder="Como podemos chamar você?" autoComplete="nickname"/>
           <div className="lobby-actions"><button className="button primary" disabled={connection === 'connecting'} onClick={() => connect('casual')}>{connection === 'connecting' ? 'Conectando…' : 'Jogar casual'}</button><button className="button secondary" disabled={connection === 'connecting'} onClick={() => connect('friends')}>Jogar com amigo</button></div>
           <div className="join-divider"><span>ou entre com um convite</span></div>
           <form className="join-form" onSubmit={event => { event.preventDefault(); void connect('join'); }}><input aria-label="Código da sala" value={code} onChange={event => setCode(event.target.value.toUpperCase().replace(/[^A-F0-9]/g, '').slice(0, 8))} maxLength={8} placeholder="Código da sala" autoComplete="off"/><button className="button secondary" disabled={connection === 'connecting' || code.length !== 8}>Entrar</button></form>
-          <p className="microcopy">Cada partida começa do zero. As escolhas valem apenas para esta sala.</p>
         </section>
       </section>
 
@@ -268,39 +291,40 @@ export default function GameApp({ gamePort }: { gamePort: string }) {
         <div className="workshop-grid">
           <section className="board-column" id="army">
             <PlayerBar name={opponent?.name ?? (snapshot.mode === 'casual' ? 'Buscando adversário…' : 'Esperando seu amigo…')} detail={opponent ? !opponent.connected ? 'Reconectando…' : opponent.ready ? 'Exército confirmado' : 'Preparando o exército' : 'Você já pode montar seu exército.'} color={other(snapshot.you)} ready={opponent?.ready ?? false} preparation/>
-            <Board board={board} color={snapshot.you} selected={selected} legal={snapshot.legalMoves} lastMove={snapshot.game?.lastMove} checked={checked} onSquare={selectSquare} onCancel={() => { setSelected(null); setWantedOffer(null); }} preparation/>
+            <Board board={board} color={snapshot.you} selected={selected} legal={highlightMoves} lastMove={snapshot.game?.lastMove} checked={checked} onSquare={selectSquare} onCancel={() => { setSelected(null); setWantedOffer(null); }} preparation/>
             <PlayerBar name={self?.name ?? name} detail={snapshot.you === 'w' ? 'Peças brancas · você começa' : 'Peças pretas · segundo lance'} color={snapshot.you} ready={self?.ready ?? false} preparation self/>
 
           </section>
           <aside className="workshop-side">
-            <BudgetBar spent={spent} gold={snapshot.draft.gold}/>
+            <BudgetBar draft={snapshot.draft} color={snapshot.you}/>
             <div className="desktop-inspector" id="piece-inspector" tabIndex={-1}>{inspector}</div>
             <div className="ready-panel"><div><span className={`ready-icon ${snapshot.draft.ready ? 'ready' : ''}`}>{snapshot.draft.ready ? '✓' : '♜'}</span><p><strong>{snapshot.draft.ready ? 'Exército confirmado' : 'Revise suas escolhas'}</strong><small>{snapshot.draft.ready ? 'Aguardando o adversário.' : `${snapshot.draft.gold} moedas disponíveis`}</small></p></div><button className={`button ${snapshot.draft.ready ? 'secondary' : 'primary'}`} disabled={!readyForInput} onClick={() => snapshot.draft.ready ? send('ready', false) : setModal('review')}>{snapshot.draft.ready ? 'Editar exército' : 'Revisar exército'}</button></div>
           </aside>
         </div>
-        <Shop developerMode={process.env.NODE_ENV !== 'production'} offers={offers} selected={selected} piece={selectedPiece} gold={snapshot.draft.gold} editable={editable} pending={draftPending} wanted={wantedOffer} onCancel={() => setWantedOffer(null)} onChoose={chooseOffer} onEquip={id => selected !== null && draftAction({ type: 'equip', square: selected, ability: id })} onInspect={inspect}/>
+        <Shop offers={offers} selected={selected} piece={selectedPiece} gold={snapshot.draft.gold} refreshCost={snapshot.refreshCost} spells={snapshot.draft.spells} editable={editable} pending={draftPending} wanted={wantedOffer} onCancel={() => setWantedOffer(null)} onChoose={chooseOffer} onEquip={id => { const ability = abilityById(id); if (ability?.type === 'spell') draftAction({ type: 'buySpell', ability: id }); else if (selected !== null) draftAction({ type: 'equip', square: selected, ability: id }); }} onRefresh={() => { if (draftPendingRef.current || connection !== 'connected') return; draftPendingRef.current = true; setDraftPending(true); send('refreshShop'); }} onInspect={inspect}/>
         {draftPending && <p className="pending-status" role="status">Confirmando alteração do exército…</p>}
       </> : <div className="game-layout">
         <section className="board-column">
           <PlayerBar name={opponent?.name ?? 'Adversário'} detail={opponent ? !opponent.connected ? 'Reconectando…' : snapshot.you === 'w' ? 'Peças negras' : 'Peças brancas' : 'Conectando jogador…'} color={other(snapshot.you)} clock={snapshot.clocks[other(snapshot.you)]} active={snapshot.game?.turn === other(snapshot.you) && snapshot.phase === 'playing'}/>
-          <Board board={board} color={snapshot.you} selected={selected} legal={snapshot.legalMoves} lastMove={snapshot.game?.lastMove} checked={checked} onSquare={selectSquare} onCancel={() => { setSelected(null); setWantedOffer(null); }}/>
+          <Board board={board} color={snapshot.you} selected={selected} legal={highlightMoves} lastMove={snapshot.game?.lastMove} checked={checked} onSquare={selectSquare} onCancel={() => { setSelected(null); setWantedOffer(null); }}/>
           <PlayerBar name={self?.name ?? name} detail={snapshot.you === 'w' ? 'Brancas · você começa' : 'Negras · segundo lance'} color={snapshot.you} clock={snapshot.clocks[snapshot.you]} active={snapshot.game?.turn === snapshot.you && snapshot.phase === 'playing'} self/>
           <p className={`board-hint ${checked !== undefined ? 'check-hint' : ''}`}><span aria-hidden="true">{checked !== undefined ? '!' : '✧'}</span>{snapshot.phase === 'reveal' ? <>Os exércitos estão revelados. A partida começa em <span aria-live="off">{Math.max(0, Math.ceil(((snapshot.revealUntil ?? 0) - now) / 1000))} s</span>.</> : snapshot.phase === 'finished' ? snapshot.result?.reason : checked !== undefined ? checkMessage : snapshot.game?.turn === snapshot.you ? 'Sua vez. Selecione uma peça para ver os destinos.' : 'Aguarde a jogada do adversário.'}</p>
           <span className="sr-only" role="status">{checked !== undefined ? checkMessage : snapshot.phase === 'playing' ? snapshot.game?.turn === snapshot.you ? 'Sua vez de jogar.' : 'Turno do adversário.' : ''}</span>
         </section>
         <aside className="side-column">
           {snapshot.phase === 'finished' ? <section className="result-card"><span className="result-icon">{snapshot.result?.winner === snapshot.you ? '♛' : snapshot.result?.winner === null ? '＝' : '♚'}</span><p className="eyebrow">{snapshot.result?.winner === null ? 'Empate' : snapshot.result?.winner === snapshot.you ? 'Vitória' : 'Partida encerrada'}</p><h2>{resultTitle}</h2><p>{snapshot.result?.reason}</p><button className="button primary" onClick={leave}>Voltar ao início</button><small>Uma nova partida traz um novo exército.</small></section> : null}
-          {selectedPiece && <section className="piece-detail"><Piece kind={selectedPiece.kind} color={selectedPiece.color}/><div><p className="eyebrow">{squareName(selected!)}</p><h3>{NAMES[selectedPiece.kind]} {selectedPiece.color === 'w' ? 'branco' : 'preto'}</h3><p>{selectedAbility ? `${selectedAbility.name}: ${selectedAbility.description}` : 'Movimentos tradicionais de xadrez.'}</p>{selectedPiece.kind === 'p' && selectedAbility && <small>A melhoria termina quando o peão promove.</small>}</div></section>}
+          {selectedPiece && <section className="piece-detail"><Piece kind={selectedPiece.kind} color={selectedPiece.color}/><div><p className="eyebrow">{squareName(selected!)}</p><h3>{NAMES[selectedPiece.kind]} {selectedPiece.color === 'w' ? 'branco' : 'preto'}</h3>{selectedWeapon && <p>Arma · {selectedWeapon.name}: {selectedWeapon.description}</p>}{selectedEnchantment && <p>Encantamento · {selectedEnchantment.name}: {selectedEnchantment.description}</p>}{!selectedWeapon && !selectedEnchantment && <p>Movimentos tradicionais de xadrez.</p>}{selectedPiece.heart && <small>Segundo coração disponível.</small>}{selectedPiece.kind === 'p' && (selectedWeapon || selectedEnchantment) && <small>As melhorias do peão terminam quando ele promove.</small>}</div></section>}
           <section className="moves-panel"><div className="section-title"><h3>Registro de jogadas</h3><span className="little-label">{snapshot.moves.length} lances</span></div>{snapshot.moves.length === 0 ? <p className="empty-history">A história desta partida começa no primeiro lance.</p> : <ol>{Array.from({ length: Math.ceil(snapshot.moves.length / 2) }, (_, index) => <li key={index}><span>{index + 1}.</span><strong>{snapshot.moves[index * 2]}</strong><strong>{snapshot.moves[index * 2 + 1] ?? '…'}</strong></li>)}</ol>}</section>
-          {snapshot.phase === 'playing' && <div className="match-actions">{snapshot.drawOfferedBy && snapshot.drawOfferedBy !== snapshot.you ? <div className="draw-offer"><p>Seu adversário propôs empate.</p><button className="button secondary" onClick={() => send('answerDraw', true)}>Aceitar empate</button><button className="text-button" onClick={() => send('answerDraw', false)}>Recusar</button></div> : <button className="button secondary" disabled={!readyForInput || !!snapshot.drawOfferedBy} onClick={() => send('offerDraw')}>{snapshot.drawOfferedBy ? 'Empate proposto…' : 'Propor empate'}</button>}{snapshot.claimableDraw && <button className="button secondary" disabled={!readyForInput} onClick={() => send('claimDraw')}>Reivindicar empate</button>}<button className="text-button danger" disabled={!readyForInput} onClick={() => setModal('resign')}>Desistir da partida</button></div>}
+          {snapshot.phase === 'playing' && <div className="match-actions">{snapshot.game?.spells[snapshot.you].includes('time-spark') && <button className="button secondary" disabled={!readyForInput || snapshot.game.turn !== snapshot.you || !!snapshot.pendingBait} onClick={() => send('useSpell', 'time-spark')}>Instante extra · +30 segundos</button>}{snapshot.drawOfferedBy && snapshot.drawOfferedBy !== snapshot.you ? <div className="draw-offer"><p>Seu adversário propôs empate.</p><button className="button secondary" onClick={() => send('answerDraw', true)}>Aceitar empate</button><button className="text-button" onClick={() => send('answerDraw', false)}>Recusar</button></div> : <button className="button secondary" disabled={!readyForInput || !!snapshot.drawOfferedBy} onClick={() => send('offerDraw')}>{snapshot.drawOfferedBy ? 'Empate proposto…' : 'Propor empate'}</button>}{snapshot.claimableDraw && <button className="button secondary" disabled={!readyForInput} onClick={() => send('claimDraw')}>Reivindicar empate</button>}<button className="text-button danger" disabled={!readyForInput} onClick={() => setModal('resign')}>Desistir da partida</button></div>}
         </aside>
       </div>}
     </main>}
 
     <footer className="footer"><span>gambito <i>· nome provisório</i></span><button className="text-button" onClick={() => setModal('rules')}>Consultar regras</button></footer>
 
-    {modal === 'rules' && <Modal title="Seu exército. Sua estratégia." close={() => setModal(null)}><div className="rules-copy"><p>Você começa com o exército tradicional de <strong>39 pontos de material e {STARTING_GOLD} moedas</strong>. As 15 casas iniciais ao redor do Rei podem receber qualquer peça, inclusive peões. O Rei é obrigatório e fica na casa inicial.</p><p><strong>Troque, equipe ou sacrifique.</strong> Remover uma peça devolve seu valor em moedas: peão 1, cavalo e bispo 3, torre 5, dama 9. Uma peça nova custa o mesmo valor. Trocas e remoções também devolvem o custo da melhoria equipada.</p><p><strong>A loja muda a cada sala.</strong> O servidor sorteia oito ofertas entre onze melhorias, com pelo menos três compatíveis com peões. Os dois jogadores recebem as mesmas ofertas. Cada peça pode receber uma melhoria.</p><p><strong>O xadrez continua reconhecível.</strong> Xeque, mate, roque, en passant e promoção continuam. Melhorias acrescentam movimentos ou capturas informados na oferta. Movimentos sem captura não ameaçam o Rei; a melhoria do peão termina ao promover.</p><p><strong>10 minutos por jogador, sem acréscimo.</strong> Após confirmar os exércitos, ambos têm oito segundos para observá-los. O relógio continua durante uma desconexão; a reconexão é permitida por até 60 segundos.</p><p><strong>Empate</strong> pode ocorrer por acordo, afogamento ou material insuficiente reconhecido. Repetição tripla e 50 lances podem ser reivindicados no turno; cinco repetições e 75 lances encerram automaticamente.</p><p className="rules-footnote">Esta versão oferece partidas casuais e salas com amigos. Contas, ranking, histórico persistente, recompensas e melhorias permanentes ainda não estão disponíveis.</p></div></Modal>}
-    {modal === 'review' && snapshot && <Modal title="Revise seu exército" close={() => setModal(null)}><p className="modal-description">O adversário verá sua formação quando os dois confirmarem.</p><BudgetBar spent={spent} gold={snapshot.draft.gold}/><div className="review-stats"><div><strong>{snapshot.draft.board.filter(Boolean).length}</strong><span>peças, incluindo o Rei</span></div><div><strong>{spentOnAbilities(snapshot.draft.board)}</strong><span>moedas em melhorias</span></div></div><ul className="review-list">{snapshot.draft.board.map((piece, square) => piece?.ability ? <li key={piece.id}><Piece kind={piece.kind} color={piece.color}/><span><strong>{NAMES[piece.kind]} · {squareName(square)}</strong><small>{abilityById(piece.ability)?.name}</small></span><span className="price">{abilityById(piece.ability)?.price} moedas</span></li> : null)}</ul>{spentOnAbilities(snapshot.draft.board) === 0 && <p className="small-muted">Você escolheu jogar sem melhorias. Isso também é uma estratégia.</p>}<p className="modal-description">Restam {snapshot.draft.gold} moedas. O saldo não passa para a próxima partida. {opponent ? 'A partida começa oito segundos depois das duas confirmações.' : 'Aguardaremos um adversário entrar e confirmar.'}</p><button className="button primary full-width" disabled={!readyForInput} onClick={() => { send('ready', true); setModal(null); setSelected(null); }}>Confirmar exército</button></Modal>}
+    {modal === 'rules' && <Modal title="Seu exército. Sua estratégia." close={() => setModal(null)}><div className="rules-copy"><p>Você começa com o exército tradicional de <strong>39 pontos de material e {STARTING_GOLD} moedas</strong>. O Rei é obrigatório e fica na casa inicial. As peças podem ser reposicionadas nas quatro fileiras do seu lado.</p><p><strong>Avançar custa poder.</strong> Uma peça nas fileiras 3–4 para brancas ou 6–5 para pretas adiciona 2 pontos ao poder total. Material tem limite 39; poder total tem limite 50 e soma material, melhorias compradas e avanço.</p><p><strong>Classes e espaços.</strong> Peões, cavalos e bispos são peças menores; torres e damas são maiores. Cada peça pode receber uma arma e um encantamento. Feitiços ficam guardados para ativação durante a partida.</p><p><strong>Mercado.</strong> A sala sorteia cinco cartas, iguais para os dois jogadores no começo. Quando alguém compra, aquele espaço recebe uma nova carta apenas na loja dessa pessoa. Atualizar a loja custa 1 moeda, depois 2, 3 e assim por diante. Melhorias e moedas não passam para a próxima sala.</p><p><strong>Efeitos especiais.</strong> Isca permite escolher uma entre três melhorias gratuitas quando a peça encantada é capturada. Segundo coração cancela uma captura uma vez. Instante extra acrescenta 30 segundos no próprio turno, sem consumir o lance.</p><p><strong>O xadrez continua reconhecível.</strong> Xeque, mate, roque, en passant e promoção continuam. As regras de cada carta aparecem antes da compra; promoções removem os aprimoramentos do peão.</p><p><strong>10 minutos por jogador, sem acréscimo.</strong> Após confirmar os exércitos, ambos têm oito segundos para observá-los. O relógio continua durante uma desconexão; a reconexão é permitida por até 60 segundos.</p><p><strong>Empate</strong> pode ocorrer por acordo, afogamento ou material insuficiente reconhecido. Repetição tripla e 50 lances podem ser reivindicados no turno; cinco repetições e 75 lances encerram automaticamente.</p><p className="rules-footnote">Esta versão oferece partidas casuais e salas com amigos. Contas, ranking, histórico persistente, recompensas e melhorias permanentes ainda não estão disponíveis.</p></div></Modal>}
+    {modal === 'review' && snapshot && <Modal title="Revise seu exército" close={() => setModal(null)}><p className="modal-description">O adversário verá sua formação quando os dois confirmarem.</p><BudgetBar draft={snapshot.draft} color={snapshot.you}/><div className="review-stats"><div><strong>{snapshot.draft.board.filter(Boolean).length}</strong><span>peças, incluindo o Rei</span></div><div><strong>{spentOnAbilities(snapshot.draft.board) + spentOnSpells(snapshot.draft)}</strong><span>moedas em melhorias e feitiços</span></div><div><strong>{advancedPieces(snapshot.draft.board, snapshot.you)}</strong><span>peças avançadas · {advancedCost(snapshot.draft.board, snapshot.you)} pontos</span></div></div><ul className="review-list">{snapshot.draft.board.map((piece, square) => piece ? [piece.weapon, piece.enchantment].filter(Boolean).map(id => <li key={piece.id + id}><Piece kind={piece.kind} color={piece.color}/><span><strong>{NAMES[piece.kind]} · {squareName(square)}</strong><small>{abilityById(id)?.name}</small></span><span className="price">{abilityById(id)?.price} moedas</span></li>) : null)}</ul>{snapshot.draft.spells.map(id => <p key={id} className="modal-description">Feitiço guardado: {abilityById(id)?.name} · {abilityById(id)?.price} moedas.</p>)}<p className="modal-description">Restam {snapshot.draft.gold} moedas. Pontuação de poder {powerScore(snapshot.draft, snapshot.you)} / {POWER_CAP}. {opponent ? 'A partida começa oito segundos depois das duas confirmações.' : 'Aguardaremos um adversário entrar e confirmar.'}</p><button className="button primary full-width" disabled={!readyForInput} onClick={() => { send('ready', true); setModal(null); setSelected(null); }}>Confirmar exército</button></Modal>}
+    {modal === 'bait' && snapshot?.pendingBait && <Modal title="Isca ativada" dismissible={false} close={() => {}}><p className="modal-description">A peça encantada foi capturada. Escolha uma entre {snapshot.pendingBait.choices.length} melhorias compatíveis e aplique-a a uma peça aliada com espaço livre.</p><label className="bait-select-label">Melhoria<select value={baitAbility} onChange={event => { setBaitAbility(event.target.value); setBaitSquare(null); }}>{snapshot.pendingBait.choices.map(id => <option key={id} value={id}>{abilityById(id)?.name} · {abilityById(id)?.type === 'weapon' ? 'arma' : 'encantamento'}</option>)}</select></label><label className="bait-select-label">Aplicar em<select value={resolvedBaitSquare ?? ''} onChange={event => setBaitSquare(Number(event.target.value))}>{baitTargets.map(target => <option key={target.square} value={target.square}>{target.name}</option>)}</select></label>{baitTargets.length === 0 && <p className="cost-warning">Nenhuma peça aliada tem espaço compatível. A escolha continua pendente.</p>}<button className="button primary full-width" disabled={resolvedBaitSquare === null || !baitAbility} onClick={() => send('chooseBait', { ability: baitAbility, square: resolvedBaitSquare })}>Aplicar melhoria</button></Modal>}
     {modal === 'piece' && snapshot && preparing && <Modal title="Ficha da peça" close={() => setModal(null)} sheet>{inspector}{draftPending && <p role="status">Confirmando alteração…</p>}</Modal>}
     {(modal === 'leave' || modal === 'resign') && <Modal title={modal === 'resign' ? 'Desistir desta partida?' : 'Sair desta sala?'} close={() => setModal(null)}><p className="modal-description">{snapshot?.phase === 'playing' || snapshot?.phase === 'reveal' ? 'Sair encerra a partida e concede a vitória ao adversário.' : 'A preparação será encerrada. Uma nova sala terá um novo sorteio de melhorias.'}</p><div className="modal-actions"><button className="button secondary" onClick={() => setModal(null)}>Continuar aqui</button><button className="button danger-button" onClick={() => { if (modal === 'resign') { send('resign'); setModal(null); } else void leave(); }}>{modal === 'resign' ? 'Desistir' : 'Sair da sala'}</button></div></Modal>}
     {promotion && <Modal title="Escolha a promoção" close={() => setPromotion(null)}><p className="modal-description">A melhoria do peão se encerra. Escolha sua nova peça.</p><div className="promotion-options">{promotion.map(move => <button key={move.promotion} onClick={() => play(move)}><Piece kind={move.promotion!} color={snapshot!.you}/><span>{NAMES[move.promotion!]}</span></button>)}</div></Modal>}
@@ -311,6 +335,7 @@ function PlayerBar({ name, detail, color, ready, clock, active, preparation, sel
   return <div className={`player-bar ${self ? 'self' : ''}`}><div className="avatar"><Piece kind="k" color={color}/></div><div className="player-copy"><strong>{name} {self && <span className="you-label">você</span>}</strong><small>{detail}</small></div>{preparation ? <span className={`status-chip ${ready ? 'ready' : ''}`}>{ready ? '✓ Pronto' : self ? 'Montando' : '•••'}</span> : <span className={`clock ${active ? 'ticking' : ''} ${clock !== undefined && clock <= 30000 ? 'low-time' : ''}`} aria-label={`Tempo de ${name}${clock !== undefined && clock <= 30000 ? ', menos de 30 segundos' : ''}`} >{clockLabel(clock ?? 0)}</span>}</div>;
 }
 
-function BudgetBar({ spent, gold }: { spent: number; gold: number }) {
-  return <section className="budget-bar" aria-label="Orçamento do exército"><div className="budget-item"><span>Material</span><strong>{spent}<small> / {MATERIAL_CAP} pts</small></strong><div className="budget-track" role="progressbar" aria-label="Material usado" aria-valuemin={0} aria-valuemax={MATERIAL_CAP} aria-valuenow={spent}><i style={{ width: `${Math.min(100, spent / MATERIAL_CAP * 100)}%` }}/></div></div><div className="gold-counter"><span>Ouro disponível</span><strong><i aria-hidden="true">◉</i> {gold}</strong><small>Para recrutar ou melhorar</small></div></section>;
+function BudgetBar({ draft, color }: { draft: Snapshot['draft']; color: Color }) {
+  const spent = material(draft.board), power = powerScore(draft, color), advancement = advancedCost(draft.board, color);
+  return <section className="budget-bar" aria-label="Orçamento do exército"><div className="budget-item"><span>Material</span><strong>{spent}<small> / {MATERIAL_CAP} pts</small></strong><div className="budget-track" role="progressbar" aria-label="Material usado" aria-valuemin={0} aria-valuemax={MATERIAL_CAP} aria-valuenow={spent}><i style={{ width: `${Math.min(100, spent / MATERIAL_CAP * 100)}%` }}/></div></div><div className="budget-item power-budget"><span>Poder total</span><strong>{power}<small> / {POWER_CAP} pts</small></strong><div className="budget-track" role="progressbar" aria-label="Poder total" aria-valuemin={0} aria-valuemax={POWER_CAP} aria-valuenow={power}><i style={{ width: `${Math.min(100, power / POWER_CAP * 100)}%` }}/></div><small>Inclui {spentOnAbilities(draft.board) + spentOnSpells(draft)} pts em melhorias e {advancement} pts de avanço</small></div><div className="gold-counter"><span>Ouro disponível</span><strong><i aria-hidden="true">◉</i> {draft.gold}</strong><small>Para recrutar, melhorar ou atualizar a loja</small></div></section>;
 }

@@ -1,5 +1,7 @@
 # Registro da implementação
 
+> **Estado vigente:** o roteiro `docs/nextmoves.md` foi implementado no conjunto de regras `workshop-0.2.0`. Consulte a seção 20 e `docs/regras-prototipo.md` para o comportamento atual; os registros anteriores descrevem etapas históricas e valores já substituídos. Esta etapa foi documentada sem executar testes, typecheck, build ou inspeção visual.
+
 **Data:** 27 de setembro de 2026.  
 **Etapa:** primeiro protótipo local, com preparação e partidas entre dois convidados.  
 **Orientação mais recente do usuário:** documentar o trabalho e não continuar os testes por enquanto. Após essa orientação, o trabalho desta etapa passou a ser exclusivamente de documentação.
@@ -41,6 +43,8 @@ O usuário autorizou começar a implementação e definiu que:
 Nenhum deploy público ou commit foi realizado nesta etapa. “Online” no protótipo significa comunicação real entre dois clientes e um servidor; ainda não significa um serviço publicado na internet.
 
 ## 2. Decisões confirmadas e hipóteses provisórias
+
+**Registro histórico:** esta tabela descreve a primeira versão 0.1.0. As regras vigentes após `nextmoves.md` estão na seção 20 e em `docs/regras-prototipo.md`.
 
 | Tema | Origem | Estado atual |
 |---|---|---|
@@ -158,6 +162,8 @@ O apelido fica no armazenamento local do navegador. O token temporário de recon
 
 ## 6. Economia implementada
 
+**Histórico da versão 0.1.0.** A economia e a conservação descritas abaixo foram substituídas pelo orçamento de Poder, avanço e custo de atualização da versão 0.2.0, registrados na seção 20.
+
 O jogador recebe o exército tradicional e 12 moedas de preparação. O material das peças tem teto 39; as melhorias são pagas com moedas separadas. Sacrificar converte a peça em moedas e abre uma casa. Trocar de peça ou melhoria primeiro reembolsa o valor anterior e depois cobra o novo.
 
 Exemplo do comportamento atual: equipar Passo lateral num peão custa 3 moedas, deixando 9. Sacrificar outro peão adiciona 1 moeda, deixa 10 no saldo e reduz o material para 38. Se for sacrificado o peão equipado, são devolvidos 1 da peça e 3 da melhoria.
@@ -208,10 +214,8 @@ O foco imediato é manter o trabalho compreensível e documentado. A próxima al
 
 Pendências de produto:
 
-- Rever 12 moedas, oito ofertas, preços e distribuição por tipo de peça.
-- Confirmar se material e dinheiro separados produzem a experiência desejada.
-- Avaliar se começar com exército completo é o melhor fluxo, ou se o jogador deve montar a partir de um tabuleiro vazio.
-- Definir a duração desejada da preparação.
+- Balancear 12 moedas, cinco ofertas, preços, distribuição de raridade, teto de Poder e avanço com partidas humanas.
+- Avaliar se começar com exército completo é o melhor fluxo e medir a duração da preparação.
 - Decidir como explorar séries/revanche sem transformar uma sessão casual em uma hora de jogo.
 - Retomar as decisões de recompensas e eventual saldo entre partidas sem vantagem competitiva.
 - Definir nome, identidade visual final e requisitos do catálogo competitivo.
@@ -337,3 +341,91 @@ Aplicadas as anotações visuais do navegador:
 - O indicador de navegação da loja recalcula a oferta visível quando a grade muda de tamanho.
 
 **Verificações desta etapa:** typecheck passou com Node 24; suíte completa passou (15 testes). Conferência da tela aberta no navegador confirmou o código da sala no topo, o tabuleiro com quatro fileiras próprias, ausência da faixa removida, cinco cartões e botão de expansão marcado como desenvolvimento. A partida existente foi mantida aberta.
+
+## 17. Revisão da entrada e prévia — 28/09/2026
+
+- A prévia do tabuleiro e a cena monumental foram reduzidas levemente em desktop, tablet e celular para dar mais respiro ao formulário.
+- A chamada da tela inicial foi reescrita em linguagem direta: “Sua formação muda a partida.” A descrição agora explica em uma frase o que o jogador faz.
+- Removidos o rótulo “1 contra 1” e a microcopy que explicava que as escolhas valem para uma sala.
+
+**Verificações desta etapa:** typecheck passou com Node 24; conferi no navegador os textos novos e a remoção do rótulo e da microcopy. A comparação visual dos breakpoints segue pendente.
+
+## 18. Posição da prévia do tabuleiro — 28/09/2026
+
+Desloquei o tabuleiro decorativo para cima e à esquerda em desktop, tablet e celular, mantendo a escala definida na etapa anterior.
+
+## 19. Refinamento da posição da prévia — 28/09/2026
+
+A pedido do usuário, avancei mais um pouco o tabuleiro para cima e à esquerda nas mesmas faixas responsivas.
+
+## 20. Implementação das regras de `nextmoves.md` — 28/09/2026
+
+O usuário pediu para ler o roteiro e implementá-lo. O arquivo original foi preservado; as escolhas necessárias para resolver exemplos incompletos estão discriminadas em `docs/regras-prototipo.md` e na seção 3 de `docs/design-do-jogo.md`.
+
+### Regras de montagem e catálogo
+
+- `lib/catalog.ts`: versão `workshop-0.2.0`; 16 cartas com classes menor/maior, tipos Arma/Encantamento/Feitiço, raridades comum/incomum/raro/lendário e catálogo de custos/efeitos. O sorteio gera cinco espaços com ao menos uma Arma de cada classe, um Encantamento, um Feitiço e uma quinta oferta.
+- `lib/draft.ts` e `lib/types.ts`: Poder `material + melhorias equipadas + feitiços guardados + 2 por peça avançada`, limitado a 50; material limitado a 39; quatro fileiras próprias; casa do Rei fixa; compatibilidade de classe; espaço separado para uma Arma e um Encantamento; inventário de Feitiços; custo crescente de reposição e contabilização desse gasto para impedir criação de moedas.
+- A composição inicial conserva 39 pontos de material e 12 moedas. Trocar/sacrificar peça reembolsa o valor da peça e as melhorias nela equipadas. Substituir/remover melhoria reembolsa a carta anterior. Armas podem repetir em peças diferentes. Não há saldo ou progresso persistente.
+- Loja inicial igual para os dois lados. Cada compra repõe só o espaço de quem comprou; atualizar loja substitui cinco ofertas, custa 1, 2, 3… moedas e evita as ofertas visíveis e os Feitiços já comprados daquela pessoa.
+- As anotações de ataque vertical adjacente foram omitidas por duplicarem um ataque já disponível para torre e dama. O efeito de Feitiço que aumentaria o limite de peças ficou para depois por ainda não ter custo nem janela de uso definidos. Instante extra implementa o exemplo de ampliar relógio.
+
+### Efeitos durante a partida e apresentação
+
+- `lib/chess.ts` e `lib/clock.ts`: suporte ao encantamento Segundo coração, que cancela uma captura e consome o turno; captura de Isca, com espera e escolha de uma opção compatível grátis; Feitiço Instante extra, que concede 30 segundos no próprio turno sem gastar o lance. Armas aplicam ameaças adicionais conforme o catálogo.
+- `server/ChessRoom.ts`: validação autoritativa de compras, reposições, montagens, alvos, Isca e Feitiço. Reposições/atualizações são pessoais após a loja inicial. A partida aguarda a decisão de Isca antes de aceitar lance ou ação de empate; desistência é permitida. O snapshot só mostra as opções de Isca ao jogador que deve escolhê-las.
+- `components/Board.tsx`, `components/PieceInspector.tsx`, `components/Shop.tsx` e `components/GameApp.tsx`: movimentação durante preparação, classe e espaços da peça, Material/Poder/Ouro, cinco cartas menores, compra de Feitiço, botão de atualização, revisão com avanço/poder, seletor de Isca e botão de ativação do Feitiço.
+- `app/globals.css`: selos de raridade e pulsações curtas em raras/lendárias. `prefers-reduced-motion` remove essas animações. Não foi adicionado um efeito vertical sem função nem cerimonial que interrompa a preparação.
+- Loja continua temporária e de jogo; não há monetização real, conta, saldo permanente, recompensas pós-partida, ranqueado ou cosméticos.
+
+### Documentação e limitações
+
+Atualizados `docs/regras-prototipo.md`, `docs/design-do-jogo.md` e `README.md`. A seção 20 e as regras 0.2.0 substituem valores das seções históricas que diziam oito ofertas, onze habilidades ou classificavam poder, reposicionamento e raridades como pendentes.
+
+Os custos, raridades e o teto de poder são parâmetros iniciais para balancear com partidas, não valores finais. A loja não usa probabilidades ponderadas explicitamente. Isca sorteia até três opções compatíveis ao ser ativada. A economia continua reiniciando em cada sala, conforme o escopo atual.
+
+**Verificações desta etapa:** nenhuma. Não foram executados testes, typecheck, build ou inspeção no navegador. O pedido anterior de documentar e deixar verificações para depois permanece atendido; os critérios de aceitação funcional e visual estão no README e no guia de design.
+
+## 21. Cartas com acabamento por raridade e marcadores — 28/09/2026
+
+Pedido: aproximar as melhorias da linguagem visual de itens de Diablo 3/4, com cor na carta inteira, uma entrada bonita e efeitos sutis persistentes nas raridades altas. O usuário aprovou os emblemas vetoriais e pediu que os marcadores das peças compartilhassem a cor e o brilho da melhoria; informou também que parte do catálogo será removida, portanto não ampliar a ilustração para todas as cartas.
+
+- `components/Shop.tsx` e `app/globals.css`: comum prata, incomum azul, raro ouro e lendário âmbar. Fundos tingidos, moldura dupla, títulos em serif e selo de raridade; botões e estados de compatibilidade preservam a paleta da carta. A descrição continua legível sobre fundo escuro.
+- Entrada: passagem diagonal de luz de 720 ms, com 45 ms entre espaços. Raras têm aura de 8 s; lendárias, aura de 6,5 s e três brasas pequenas junto às bordas. Decoração não captura eventos. Observação de visibilidade pausa efeitos quando a loja sai da tela ou a aba fica oculta. Movimento reduzido deixa a carta estática.
+- `components/OfferSigil.tsx`: emblemas SVG originais para Isca, Segundo coração e Instante extra. Armas mantêm diagramas, agora centralizados, com casas dimensionadas sem sobrepor a legenda.
+- `components/Board.tsx`: marcadores com SVG monocromático, cor e halo da raridade de cada melhoria; uma peça com dois equipamentos mantém dois marcadores independentes. Raridade incluída no título e no texto acessível da casa. O brilho do tabuleiro é estático para não disputar atenção com os lances.
+- Atualizados o guia de design (1.3) e a descrição visual nas regras. Nenhuma dependência adicionada por esta etapa.
+
+**Verificações:** TypeScript passou. Inspeção no navegador local confirmou as quatro paletas, reposição de ofertas, emblemas, diagramas sem sobreposição e marcador lendário em um peão. A conferência usou sala privada temporária. Não foi executada suíte de regras ou build de produção; não há afirmação de verificação móvel nesta etapa.
+
+
+## 22. Selos das peças em coluna — 28/09/2026
+
+Pedido: empilhar os selos de melhoria, integrar seu acabamento ao tabuleiro e animá-los.
+
+- `app/globals.css`: coluna no canto superior direito, com 2 px de intervalo; Arma acima e Encantamento abaixo quando ambos estão presentes. Largura proporcional à casa, limitada entre 11 e 18 px.
+- Selos quadrados com cantos discretamente suavizados, fundo grafite e moldura metálica dupla inspirada na moldura do tabuleiro. Preservados os símbolos SVG, as cores de raridade e os títulos acessíveis.
+- Entrada de 280 ms, com atraso de 80 ms no segundo selo. Uma camada de luz varia suavemente sua opacidade em ciclos de 6,6 s, mantendo posição, símbolo e tamanho estáveis durante o reflexo. A animação de entrada ocorre quando o selo é montado, inclusive ao aparecer em outra casa.
+- Camadas decorativas não interceptam cliques. Movimento reduzido desativa as animações e mantém um halo estático. Nenhuma dependência ou regra de jogo alterada.
+- Guia de design atualizado para 1.4 e descrição visual atualizada nas regras. Esta seção substitui o acabamento estático dos selos descrito na seção 21.
+
+**Verificações:** revisão do código e da documentação. Não executados testes, typecheck, build ou inspeção no navegador nesta etapa.
+
+
+## 23. Hierarquia dos cards de melhoria — 28/09/2026
+
+- `components/Shop.tsx`: removido o custo da parte superior; o preço fica só no botão. O alvo não se repete no rodapé. A troca informa apenas qual melhoria será substituída, e falta de moedas continua explícita.
+- Tipo de carta ganhou ícones SVG de espada, estrela e varinha; o rótulo cresceu para 15 px. Compatibilidade agora usa selos **Plebeu** e **Realeza**, cada um com explicação ao passar o cursor ou focar pelo teclado. Tipo e raridade também explicam seus conceitos por tooltip.
+- `components/AbilityDiagram.tsx`: explicações ao passar/focar em movimento, captura, salto e orientação. A descrição específica de cada regra permanece escrita na carta.
+- `app/globals.css`: maior destaque ao nome, tipo e descrição; selos de compatibilidade combinam com a moldura e cor de raridade. Sem mudança nas regras, economia ou catálogo.
+- Guia de design atualizado com a hierarquia desejada.
+
+**Verificações:** revisão visual do código e documentação. Não foram executados testes nem typecheck nesta etapa.
+
+
+## 24. Ícone de arma, dicas estáveis e desmarcação — 28/09/2026
+
+- `components/AbilityIcon.tsx` reúne o desenho do selo de arma do tabuleiro e o reutiliza na categoria das cartas, com a mesma geometria e traços. Encantamentos e Feitiços mantêm ícones distintos.
+- `components/TermHelp.tsx` substitui as dicas nativas do navegador por um balão próprio, flutuante sobre a página, que permanece visível enquanto o cursor estiver sobre o termo ou até o foco do teclado sair. Assim não é cortado pelo carrossel da loja e não pisca quando a página recebe clique. Aplicado às classes, tipos, raridade e símbolos dos diagramas.
+- `components/GameApp.tsx`: durante a preparação, clicar outra vez na peça selecionada desmarca-a. Quando uma melhoria está sendo apontada, o clique ainda aplica a melhoria conforme o fluxo existente.
+- **Verificações:** revisão de código e `git diff --check`. Sem testes automatizados ou typecheck nesta etapa.

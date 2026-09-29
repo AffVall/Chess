@@ -13,5 +13,10 @@ export class MatchClock {
     return this.remaining[this.turn] === 0 ? this.turn : null;
   }
   changeTurn(turn: Color, now: number) { this.turn = turn; this.last = now; }
+  addTime(color: Color, milliseconds: number, now: number) {
+    this.settle(now);
+    this.remaining[color] += milliseconds;
+    this.last = Math.max(this.last, now);
+  }
   stop() { this.running = false; }
 }

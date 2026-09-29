@@ -83,7 +83,7 @@ h1, h2 { font-family: var(--font-display), Georgia, serif; font-weight: 600; }
 .join-form button { min-width: 92px; }
 .microcopy { margin-top: 13px; color: var(--color-muted); font-size: 12px; line-height: 1.5; }
 
-.hero-visual { position: relative; min-width: 0; min-height: 650px; align-self: stretch; }
+.hero-visual { position: relative; min-width: 0; min-height: 600px; align-self: stretch; }
 .monument-scene { position: absolute; inset: 0 0 28px; overflow: hidden; }
 .monument-arch { position: absolute; top: 2%; right: 8%; left: 8%; height: 87%; border: 1px solid #454b55; border-bottom: 0; border-radius: 50% 50% 3px 3px / 35% 35% 3px 3px; background: linear-gradient(90deg, rgb(255 255 255 / .015), transparent 34% 68%, rgb(255 255 255 / .025)); box-shadow: inset 0 18px 35px rgb(255 255 255 / .025), 0 0 85px rgb(176 187 204 / .06); animation: arch-arrive 600ms var(--ease-settle) both; }
 .monument-arch::before, .monument-arch::after { position: absolute; top: 16%; bottom: 0; width: 1px; background: linear-gradient(transparent, #343a43 22% 90%, transparent); content: ''; }
@@ -96,7 +96,7 @@ h1, h2 { font-family: var(--font-display), Georgia, serif; font-weight: 600; }
 .pillar-right { right: 0; }
 .monument-caption { position: absolute; top: 16%; right: 0; left: 0; display: flex; align-items: center; justify-content: center; gap: 11px; color: #aeb8c5; font-size: 9px; letter-spacing: .13em; }
 .monument-caption i { color: var(--color-gold); font-size: 16px; font-style: normal; }
-.hero-board { position: absolute; z-index: 1; top: 24%; right: 0; width: 79%; transform: perspective(1200px) rotateX(13deg) rotateZ(-6deg); transform-origin: center 72%; filter: drop-shadow(0 28px 28px rgb(0 0 0 / .6)); animation: board-arrive 600ms 100ms var(--ease-settle) both; }
+.hero-board { position: absolute; z-index: 1; top: 17%; right: 9%; width: 73%; transform: perspective(1200px) rotateX(13deg) rotateZ(-6deg); transform-origin: center 72%; filter: drop-shadow(0 28px 28px rgb(0 0 0 / .6)); animation: board-arrive 600ms 100ms var(--ease-settle) both; }
 .hero-board .board-frame { border-width: 12px 12px 18px 18px; }
 .hero-board .chessboard { overflow: hidden; }
 .hero-piece { position: absolute; z-index: 2; width: 25%; filter: drop-shadow(0 22px 18px rgb(0 0 0 / .55)); pointer-events: none; }
@@ -338,7 +338,7 @@ h1, h2 { font-family: var(--font-display), Georgia, serif; font-weight: 600; }
   .version-pill { padding-left: 13px; }
   .landing { grid-template-columns: 1fr 1fr; padding-top: 33px; }
   .hero-copy h1 { font-size: clamp(45px, 7vw, 64px); }
-  .hero-visual { min-height: 500px; }
+  .hero-visual { min-height: 465px; }
   .hero-facts span { padding-right: 12px; padding-left: 12px; }
   .lobby-card { padding: 18px; }
   .workshop-grid, .game-layout { grid-template-columns: minmax(0, 1fr); gap: 18px; }
@@ -372,9 +372,9 @@ h1, h2 { font-family: var(--font-display), Georgia, serif; font-weight: 600; }
   .section-title h2 { font-size: 20px; }
   .lobby-actions { grid-template-columns: 1fr; }
   .lobby-actions .button { width: 100%; }
-  .hero-visual { min-height: min(98vw, 450px); margin: 18px -3px 5px; }
+  .hero-visual { min-height: min(90vw, 420px); margin: 18px -3px 5px; }
   .monument-caption { top: 10%; font-size: 7px; }
-  .hero-board { top: 21%; right: 2%; width: 78%; }
+  .hero-board { top: 14%; right: 11%; width: 72%; }
   .hero-board .board-frame { border-width: 8px 8px 13px 13px; padding: 13px 6px 17px 17px; }
   .hero-piece { width: 22%; }
   .hero-piece-light { top: 17%; left: -1%; }
@@ -541,8 +541,8 @@ a.button { text-decoration: none; }
   .match-workspace .board-column { width: min(100%, 620px); }
 }
 @media (max-width: 600px) {
-  .hero-visual { min-height: 220px; height: 220px; max-width: 350px; width: 100%; margin: 30px auto 16px; }
-  .hero-board { width: 56%; right: 18%; top: 4%; }
+  .hero-visual { min-height: 205px; height: 205px; max-width: 330px; width: 100%; margin: 26px auto 14px; }
+  .hero-board { width: 53%; right: 28%; top: -4%; }
   .hero-piece-light { width: 22%; top: 18%; left: 4%; }
   .hero-piece-dark { width: 22%; right: 5%; bottom: 16%; }
   .monument-scene { inset: 0; }
@@ -609,4 +609,156 @@ a.button { text-decoration: none; }
   .offer-grid { display: flex; gap: 9px; }
   .offer-card { flex: 0 0 min(60vw, 250px); width: min(60vw, 250px); }
   .ability-diagram { max-width: 76px; }
+}
+.budget-bar { grid-template-columns: 1fr 1fr 1fr; }
+.power-budget small { color: var(--color-muted); font-size: 11px; line-height: 1.4; }
+.ability-dots { position: absolute; z-index: 4; top: 4%; right: 4%; display: flex; flex-direction: column; align-items: center; width: clamp(11px, 24%, 18px); gap: 2px; }
+.ability-dots .ability-dot { position: relative; top: auto; right: auto; flex: none; width: 100%; min-width: 0; aspect-ratio: 1; padding: 1px; font-size: 11px; }
+.heart-marker { position: absolute; z-index: 4; bottom: 4%; left: 4%; color: #e27a86; font-size: 13px; line-height: 1; text-shadow: 0 1px 3px #000; }
+.square.advanced-zone { box-shadow: inset 0 0 0 1px rgb(216 183 119 / .32); }
+.shop-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 10px; color: var(--color-muted); font-size: 12px; }
+.shop-toolbar .button { min-height: 38px; padding: 7px 12px; font-size: 12px; }
+.offer-meta { display: flex; justify-content: space-between; gap: 6px; margin: 6px 0; color: var(--color-muted); font-size: 10px; }
+/* Item-like rarity: color belongs to the whole card, including its resting state. */
+.offer-card[data-rarity], .ability-dot[data-rarity] {
+  --loot-rgb: 180 189 201;
+  --loot-ink: #d8dee7;
+  --loot-shade: #24282e;
+}
+.offer-card[data-rarity] {
+  --aura-low: .1;
+  --aura-high: .24;
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border: 1px solid rgb(var(--loot-rgb) / .48);
+  border-radius: 5px;
+  padding: 14px 12px 12px;
+  background: radial-gradient(ellipse at 50% -15%, rgb(var(--loot-rgb) / .19), transparent 64%), linear-gradient(165deg, var(--loot-shade), #101113 94%);
+  box-shadow: inset 0 1px rgb(var(--loot-rgb) / .2), 0 5px 16px rgb(0 0 0 / .25);
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+.offer-card[data-rarity="uncommon"], .ability-dot[data-rarity="uncommon"] { --loot-rgb: 95 161 236; --loot-ink: #a6d0ff; --loot-shade: #152b43; }
+.offer-card[data-rarity="rare"], .ability-dot[data-rarity="rare"] { --loot-rgb: 214 181 87; --loot-ink: #f2d789; --loot-shade: #302918; }
+.offer-card[data-rarity="legendary"], .ability-dot[data-rarity="legendary"] { --loot-rgb: 234 129 63; --loot-ink: #ffbd86; --loot-shade: #3a2218; --aura-low: .2; --aura-high: .42; }
+.ability-dots .ability-dot[data-rarity] {
+  --seal-delay: 0ms;
+  isolation: isolate;
+  padding: 1.5px;
+  border-radius: 2px;
+  color: var(--loot-ink);
+  border-color: rgb(var(--loot-rgb) / .72);
+  background: linear-gradient(145deg, #343a44, #15181d 52%, var(--loot-shade));
+  box-shadow: 0 1px 2px #08090b, 0 0 4px rgb(var(--loot-rgb) / .28), inset 0 1px rgb(255 255 255 / .16), inset 0 -1px #08090b;
+  animation: seal-arrive 280ms ease-out var(--seal-delay) both;
+}
+.ability-dots .ability-dot:nth-child(2) { --seal-delay: 80ms; }
+.ability-dot[data-rarity]::before, .ability-dot[data-rarity]::after { content: ''; position: absolute; pointer-events: none; border-radius: inherit; }
+.ability-dot[data-rarity]::before { inset: 1px; border: 1px solid rgb(var(--loot-rgb) / .16); }
+.ability-dot[data-rarity]::after {
+  inset: 0;
+  border: 1px solid rgb(var(--loot-rgb) / .7);
+  background: linear-gradient(135deg, rgb(var(--loot-rgb) / .32), transparent 55%);
+  box-shadow: 0 0 5px rgb(var(--loot-rgb) / .5);
+  opacity: .08;
+  animation: seal-glint 6.6s ease-in-out calc(400ms + var(--seal-delay)) infinite;
+}
+.ability-dot[data-rarity] svg { position: relative; z-index: 1; display: block; width: 100%; height: 100%; filter: drop-shadow(0 0 1px rgb(var(--loot-rgb) / .5)); }
+@keyframes seal-arrive { from { opacity: .3; transform: scale(.84); } to { opacity: 1; transform: scale(1); } }
+@keyframes seal-glint { 0%, 68%, 100% { opacity: .08; } 82% { opacity: .55; } }
+@media (prefers-reduced-motion: reduce) {
+  .ability-dots .ability-dot[data-rarity], .ability-dot[data-rarity]::after { animation: none; }
+  .ability-dot[data-rarity]::after { opacity: .12; }
+}
+.offer-card[data-rarity]::before {
+  content: "";
+  position: absolute;
+  z-index: 2;
+  inset: 4px;
+  border: 1px solid rgb(var(--loot-rgb) / .13);
+  border-radius: 2px;
+  pointer-events: none;
+}
+.offer-card[data-rarity]::after {
+  content: "";
+  position: absolute;
+  z-index: 2;
+  top: 0;
+  left: 18%;
+  right: 18%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgb(var(--loot-rgb) / .85), transparent);
+  pointer-events: none;
+}
+.offer-card[data-rarity] > :not(.offer-effects) { position: relative; z-index: 1; }
+.offer-card[data-rarity].compatible { border-color: rgb(var(--loot-rgb) / .85); box-shadow: inset 0 1px rgb(var(--loot-rgb) / .35), 0 5px 16px rgb(0 0 0 / .25); }
+.offer-card[data-rarity].is-equipped { border-style: double; border-color: var(--loot-ink); }
+.offer-card[data-rarity]:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 3px; }
+.offer-card[data-rarity] .offer-top h3 { color: var(--loot-ink); font-family: var(--font-display), Georgia, serif; font-size: 23px; font-weight: 600; line-height: 1.08; letter-spacing: -.015em; text-shadow: 0 2px 7px #000; }
+.offer-card[data-rarity] .price { color: var(--loot-ink); }
+.offer-card[data-rarity] .offer-meta { margin: 10px 0 0; align-items: center; gap: 10px; flex-wrap: wrap; }
+.offer-type { display: inline-flex; min-height: 25px; align-items: center; gap: 7px; color: var(--loot-ink); font-size: 15px; font-weight: 650; }
+.offer-type-icon { display: block; width: 21px; height: 21px; color: var(--loot-ink); filter: drop-shadow(0 0 4px rgb(var(--loot-rgb) / .28)); }
+.term-help { position: relative; display: inline-flex; align-items: center; cursor: help; }
+.term-help:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 3px; }
+.term-help-bubble { position: fixed; z-index: 90; width: min(240px, calc(100vw - 24px)); border: 1px solid #737e8d; border-radius: 6px; padding: 10px 12px; background: linear-gradient(150deg, #272c34, #111317); box-shadow: 0 8px 24px rgb(0 0 0 / .58), inset 0 1px rgb(255 255 255 / .08); color: #f0eee9; font-size: 13px; font-weight: 450; line-height: 1.45; pointer-events: auto; animation: term-tip-in 120ms ease-out both; }
+@keyframes term-tip-in { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: translateY(0); } }
+.offer-card .rarity-label { display: inline-flex; align-items: center; gap: 5px; color: var(--loot-ink); font-weight: 600; }
+.rarity-gem { width: 6px; height: 6px; border: 1px solid currentColor; transform: rotate(45deg); }
+.rarity-rare .rarity-gem { background: rgb(var(--loot-rgb) / .45); }
+.rarity-legendary .rarity-gem { background: currentColor; box-shadow: 0 0 7px rgb(var(--loot-rgb) / .55); }
+.offer-class-list { display: flex; min-height: 27px; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 5px; }
+.offer-class { display: inline-flex; min-height: 22px; align-items: center; border: 1px solid rgb(var(--loot-rgb) / .4); border-radius: 4px; padding: 2px 8px; background: linear-gradient(180deg, rgb(var(--loot-rgb) / .11), rgb(0 0 0 / .18)); color: #e1dfdb; font-size: 12px; font-weight: 650; letter-spacing: .015em; cursor: help; }
+.offer-class:focus-visible, .offer-type:focus-visible, .offer-card .rarity-label:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+.offer-card[data-rarity] .offer-body p { margin: 10px 0 14px; color: #e1dfdb; font-size: 14px; line-height: 1.5; }
+.offer-card[data-rarity] .offer-foot { margin-top: auto; border-color: rgb(var(--loot-rgb) / .24); }
+.purchase-preview { min-height: 0; }
+.offer-card[data-rarity] .purchase-preview { display: grid; gap: 4px; margin: 0 0 8px; color: #c7c4be; font-size: 12px; line-height: 1.3; }
+.offer-card[data-rarity] .purchase-preview:empty { display: none; }
+.offer-card[data-rarity] .purchase-preview .cost-warning { color: #ffb8b8; }
+.offer-card[data-rarity] .equipped-label { margin: 0 0 8px; color: var(--loot-ink); font-size: 12px; }
+.offer-card[data-rarity] .offer-foot button { min-height: 42px; color: var(--loot-ink); border-color: rgb(var(--loot-rgb) / .5); background: linear-gradient(180deg, rgb(var(--loot-rgb) / .13), rgb(var(--loot-rgb) / .04)); }
+.offer-card[data-rarity] .offer-foot button:hover:not(:disabled) { border-color: var(--loot-ink); background: rgb(var(--loot-rgb) / .2); }
+.offer-card[data-rarity] .offer-foot button:disabled { color: #b0adaa; border-color: rgb(var(--loot-rgb) / .22); background: rgb(0 0 0 / .12); }
+.offer-card[data-rarity] .diagram-cell.origin { color: var(--loot-ink); border-color: rgb(var(--loot-rgb) / .7); background: rgb(var(--loot-rgb) / .18); }
+.offer-card[data-rarity] .ability-diagram { width: 100%; max-width: none; min-height: 124px; margin-top: 6px; }
+.offer-card[data-rarity] .ability-diagram figcaption, .offer-card[data-rarity] .diagram-legend { text-align: center; }
+.offer-card[data-rarity] .diagram-grid { width: 88px; margin-inline: auto; grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.offer-card[data-rarity] .diagram-cell { min-width: 0; font-size: 12px; }
+.offer-card[data-rarity] .diagram-cell.origin, .offer-card[data-rarity] .diagram-cell.move { font-size: 14px; }
+.offer-sigil { display: grid; place-items: center; width: 100%; height: 124px; margin-top: 6px; color: var(--loot-ink); }
+.offer-sigil svg { width: 88px; height: 88px; filter: drop-shadow(0 0 9px rgb(var(--loot-rgb) / .2)); }
+.sigil-frame { opacity: .22; stroke-width: .8; }
+.sigil-ring { opacity: .3; stroke-dasharray: 2 5; }
+.sigil-accents { opacity: .7; }
+.sigil-fill { fill: currentColor; fill-opacity: .18; stroke: none; }
+.offer-effects { position: absolute; z-index: 0; inset: 0; overflow: hidden; border-radius: inherit; pointer-events: none; }
+.offer-aura { position: absolute; inset: -55px -20% auto; height: 210px; opacity: 0; background: radial-gradient(ellipse at 50% 0, rgb(var(--loot-rgb) / .65), transparent 70%); transform-origin: 50% 0; }
+.rarity-rare .offer-aura, .rarity-legendary .offer-aura { animation: loot-breathe 8s ease-in-out 950ms infinite; }
+.rarity-legendary .offer-aura { animation-duration: 6.5s; }
+.offer-sweep { position: absolute; inset: -30% -60%; opacity: 0; background: linear-gradient(115deg, transparent 40%, rgb(var(--loot-rgb) / .05) 46%, rgb(var(--loot-rgb) / .36) 50%, rgb(var(--loot-rgb) / .05) 54%, transparent 60%); animation: loot-arrive 720ms ease-out var(--offer-delay, 0ms) both; }
+.offer-motes { display: none; }
+.rarity-legendary .offer-motes { display: block; }
+.offer-motes i { position: absolute; bottom: 12px; left: 7px; width: 2px; height: 4px; background: var(--loot-ink); box-shadow: 0 0 5px rgb(var(--loot-rgb) / .4); opacity: 0; animation: loot-ember 7s linear 1s infinite; }
+.offer-motes i:nth-child(2) { left: auto; right: 7px; bottom: 60px; animation-delay: 3.5s; animation-duration: 9s; }
+.offer-motes i:nth-child(3) { left: 8px; bottom: 44%; animation-delay: 5s; animation-duration: 8s; }
+.offer-grid[data-motion="paused"] .offer-effects * { animation-play-state: paused; }
+@keyframes loot-arrive { 0% { transform: translateX(-65%); opacity: 0; } 22% { opacity: .8; } 100% { transform: translateX(65%); opacity: 0; } }
+@keyframes loot-breathe { 0%, 100% { opacity: var(--aura-low); transform: scaleX(.86); } 50% { opacity: var(--aura-high); transform: scaleX(1.07); } }
+@keyframes loot-ember { 0%, 25% { opacity: 0; transform: translateY(0) rotate(45deg); } 40% { opacity: .5; } 85%, 100% { opacity: 0; transform: translateY(-70px) rotate(65deg); } }
+.bait-select-label { display: grid; gap: 8px; margin: 18px 0; color: var(--color-silver); font-size: 13px; }
+.bait-select-label select { width: 100%; min-height: 46px; border: 1px solid #8895a8; border-radius: 6px; padding: 9px 12px; background: #101216; color: var(--color-text); font: inherit; }
+@media (max-width: 850px) {
+  .budget-bar { grid-template-columns: 1fr 1fr; }
+  .budget-bar .gold-counter { grid-column: 1 / -1; border-top: 1px solid #48505b; border-left: 0; padding: 9px 0 0; }
+}
+@media (max-width: 600px) {
+  .shop-toolbar { align-items: flex-start; }
+  .shop-toolbar .button { white-space: nowrap; }
+  .offer-meta { font-size: 11px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .offer-card[data-rarity], .offer-effects * { animation: none !important; transition: none; }
+  .offer-sweep, .offer-motes { display: none; }
+  .rarity-rare .offer-aura, .rarity-legendary .offer-aura { opacity: .16; transform: none; }
 }

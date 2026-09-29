@@ -1,8 +1,9 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { abilityById, NAMES, type Color } from '@/lib/catalog';
-import { squareName } from '@/lib/draft';
+import { abilityById, NAMES, RARITY_NAMES, TYPE_NAMES, type Color } from '@/lib/catalog';
+import { isAdvancedSquare, squareName } from '@/lib/draft';
 import type { Board as BoardType, Move } from '@/lib/types';
 import { Piece } from './Piece';
+import { AbilityIcon } from './AbilityIcon';
 const useSafeLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect;
 interface Props { board: BoardType; color: Color; selected?: number | null; legal?: Move[]; lastMove?: Move | null; checked?: number; onSquare?: (square: number) => void; onCancel?: () => void; preparation?: boolean }
 export function Board({ board, color, selected, legal = [], lastMove, checked, onSquare, onCancel, preparation }: Props) {
@@ -68,9 +69,18 @@ export function Board({ board, color, selected, legal = [], lastMove, checked, o
     {ranks.flatMap((rank, r) => files.map((file, f) => {
       const square = rank * 8 + file, piece = board[square];
       const target = legal.some(m => m.from === selected && m.to === square);
-      const ability = abilityById(piece?.ability);
-      const className = ['square', (rank + file) % 2 ? 'light' : 'dark', square === selected ? 'selected' : '', lastMove && [lastMove.from, lastMove.to].includes(square) ? 'last-move' : '', square === checked ? 'checked' : '', preparation && (color === 'w' ? rank > 1 : rank < 6) ? 'outside-zone' : ''].filter(Boolean).join(' ');
-      const content = <><span className="square-selection" aria-hidden="true"/><span className="square-check" aria-hidden="true"/>{piece && <Piece kind={piece.kind} color={piece.color}/>} {ability && <span className="ability-dot" title={ability.name} aria-label={`Melhoria: ${ability.name}`}>✦</span>}{target && <span className={piece ? 'legal-capture' : 'legal-dot'} aria-hidden="true"/>}</>;
+      const abilities = [abilityById(piece?.weapon), abilityById(piece?.enchantment)].filter(Boolean);
+      const abilityLabel = abilities.map(a => `${a!.name}, ${RARITY_NAMES[a!.rarity]}`).join('; ');
+      const className = ['square', (rank + file) % 2 ? 'light' : 'dark', square === selected ? 'selected' : '', lastMove && [lastMove.from, lastMove.to].includes(square) ? 'last-move' : '', square === checked ? 'checked' : '', preparation && isAdvancedSquare(square, color) ? 'advanced-zone' : ''].filter(Boolean).join(' ');
+      const content = <>
+        <span className="square-selection" aria-hidden="true"/><span className="square-check" aria-hidden="true"/>
+        {piece && <Piece kind={piece.kind} color={piece.color}/>}
+        {abilities.length > 0 && <span className="ability-dots" aria-label={'Melhorias: ' + abilityLabel}>
+          {abilities.map(ability => <span className="ability-dot" data-rarity={ability!.rarity} title={`${ability!.name} · ${TYPE_NAMES[ability!.type]} · ${RARITY_NAMES[ability!.rarity]}`} key={ability!.id}><AbilityIcon type={ability!.type}/></span>)}
+        </span>}
+        {piece?.heart && <span className="heart-marker" title="Segundo coração disponível">♥</span>}
+        {target && <span className={piece ? 'legal-capture' : 'legal-dot'} aria-hidden="true"/>}
+      </>;
       return onSquare ? <button key={square} type="button" tabIndex={square === (focused ?? selected ?? ranks[0] * 8 + files[0]) ? 0 : -1} onFocus={() => setFocused(square)} data-square={squareName(square)} className={className} onClick={() => onSquare(square)} onKeyDown={event => {
         if (event.key === 'Escape') { event.preventDefault(); onCancel?.(); return; }
         const rowDelta = event.key === 'ArrowUp' ? -1 : event.key === 'ArrowDown' ? 1 : 0;
@@ -81,7 +91,7 @@ export function Board({ board, color, selected, legal = [], lastMove, checked, o
           const nextFile = Math.max(0, Math.min(7, f + fileDelta));
           frameRef.current?.querySelector<HTMLButtonElement>(`[data-square="${squareName(ranks[nextRow] * 8 + files[nextFile])}"]`)?.focus();
         }
-      }} aria-pressed={selected === square} aria-label={`${squareName(square)}: ${piece ? `${NAMES[piece.kind]} ${piece.color === 'w' ? 'branco' : 'preto'}${ability ? ', ' + ability.name : ''}` : 'casa vazia'}${target ? ', destino disponível' : ''}${square === checked ? ', Rei em xeque' : ''}`} >{content}</button> : <div key={square} className={className}>{content}</div>;
+      }} aria-pressed={selected === square} aria-label={squareName(square) + ': ' + (piece ? NAMES[piece.kind] + (piece.color === 'w' ? ' branco' : ' preto') + (abilities.length ? ', ' + abilityLabel : '') : 'casa vazia') + (target ? ', destino disponível' : '') + (square === checked ? ', Rei em xeque' : '')} >{content}</button> : <div key={square} className={className}>{content}</div>;
     }))}
   </div></div>;
 }

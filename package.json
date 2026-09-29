@@ -18,6 +18,8 @@
     "test": "tsx --test tests/*.test.ts"
   },
   "dependencies": {
+    "18": "^0.0.0",
+    "22": "^0.0.0",
     "@colyseus/core": "^0.18.17",
     "@colyseus/sdk": "^0.18.4",
     "@colyseus/ws-transport": "^0.18.4",

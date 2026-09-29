@@ -1,4 +1,4 @@
-import { abilityById, type Color, type Kind, type Offset } from './catalog';
+import { abilityById, classForKind, type Color, type Kind, type Offset } from './catalog';
 import { copyPiece, homeKing, other, squareName } from './draft';
 import type { Board, Draft, Game, Move, Piece, Result } from './types';
 
@@ -17,7 +17,7 @@ export function attacked(board: Board, square: number, by: Color): boolean {
   for (let from = 0; from < 64; from++) {
     const piece = board[from];
     if (!piece || piece.color !== by) continue;
-    const extra = abilityById(piece.ability)?.captures ?? [];
+    const extra = abilityById(piece.weapon)?.captures ?? [];
     if (extra.some(([dx, dy]) => offset(from, dx, dy * direction(by)) === square)) return true;
     if (piece.kind === 'p') {
       if ([-1, 1].some(dx => offset(from, dx, direction(by)) === square)) return true;
@@ -92,7 +92,7 @@ function candidates(game: Game, from: number, piece: Piece): Move[] {
       }
     }
   }
-  const ability = abilityById(piece.ability);
+  const ability = abilityById(piece.weapon);
   ability?.moves?.forEach(([dx, dy]) => add(offset(from, dx, dy * direction(piece.color)), 'move'));
   ability?.captures?.forEach(([dx, dy]) => add(offset(from, dx, dy * direction(piece.color)), 'capture'));
   return moves.filter((m, i) => moves.findIndex(n => n.to === m.to && n.promotion === m.promotion) === i);
@@ -100,14 +100,23 @@ function candidates(game: Game, from: number, piece: Piece): Move[] {
 
 function advance(game: Game, move: Move): Game {
   const board = game.board.map(copyPiece), piece = board[move.from]!;
-  const captured = !!board[move.to] || move.enPassant !== undefined;
+  const victimSquare = move.enPassant ?? move.to;
+  const victim = board[victimSquare];
+  if (victim?.heart && victim.enchantment === 'second-heart') {
+    victim.heart = false;
+    const next = { ...game, board, turn: other(game.turn), ply: game.ply + 1, halfmove: game.halfmove + 1, enPassant: null, lastMove: { ...move, defended: true }, repetitions: game.repetitions };
+    return next;
+  }
+  const captured = !!victim || move.enPassant !== undefined;
   const isPawn = piece.kind === 'p';
   board[move.from] = null;
   if (move.enPassant !== undefined) board[move.enPassant] = null;
   board[move.to] = { ...piece, moved: true };
   if (move.promotion) {
     board[move.to]!.kind = move.promotion;
-    delete board[move.to]!.ability;
+    delete board[move.to]!.weapon;
+    delete board[move.to]!.enchantment;
+    delete board[move.to]!.heart;
   }
   if (move.castle) {
     board[move.castle.to] = { ...board[move.castle.from]!, moved: true };
@@ -118,6 +127,7 @@ function advance(game: Game, move: Move): Game {
     halfmove: isPawn || captured ? 0 : game.halfmove + 1,
     enPassant: isPawn && Math.abs(move.to - move.from) === 16 ? (move.to + move.from) / 2 : null,
     lastMove: move, repetitions: game.repetitions,
+    spells: move.spell ? { ...game.spells, [piece.color]: game.spells[piece.color].filter(id => id !== move.spell) } : game.spells,
   };
 }
 export function legalMoves(game: Game): Move[] {
@@ -129,8 +139,25 @@ export function legalMoves(game: Game): Move[] {
   }
   return moves;
 }
+export function legalSpellMoves(game: Game, color: Color, spellId: string): Move[] {
+  const spell = abilityById(spellId);
+  if (!spell || spell.type !== 'spell' || !spell.captures || !game.spells[color].includes(spellId)) return [];
+  const moves: Move[] = [];
+  for (let from = 0; from < 64; from++) {
+    const piece = game.board[from], pieceClass = classForKind(piece?.kind);
+    if (!piece || piece.color !== color || !pieceClass || !spell.classes.includes(pieceClass)) continue;
+    for (const [dx, dy] of spell.captures) {
+      const to = offset(from, dx, dy * direction(color));
+      const target = to === null ? null : game.board[to];
+      if (!target || target.color === color || target.kind === 'k') continue;
+      const move = { from, to: to!, spell: spellId };
+      if (!inCheck(advance(game, move).board, color)) moves.push(move);
+    }
+  }
+  return moves;
+}
 export function positionKey(game: Game): string {
-  const cells = game.board.map((p, square) => p ? `${p.color}${p.kind}${p.ability ?? ''}${p.kind === 'p' && !p.moved && Math.floor(square / 8) === (p.color === 'w' ? 1 : 6) ? '2' : ''}` : '-').join(',');
+  const cells = game.board.map((p, square) => p ? `${p.color}${p.kind}${p.weapon ?? ''}${p.enchantment ?? ''}${p.heart ? 'h' : ''}${p.kind === 'p' && !p.moved && Math.floor(square / 8) === (p.color === 'w' ? 1 : 6) ? '2' : ''}` : '-').join(',');
   let rights = '';
   for (const color of ['w', 'b'] as Color[]) {
     const base = homeKing(color), king = game.board[base];
@@ -141,12 +168,12 @@ export function positionKey(game: Game): string {
     }
   }
   const ep = game.enPassant !== null && legalMoves(game).some(m => m.enPassant !== undefined) ? game.enPassant : '-';
-  return `${cells}|${game.turn}|${rights}|${ep}`;
+  return `${cells}|${game.turn}|${rights}|${ep}|${game.spells.w.join(',')}|${game.spells.b.join(',')}`;
 }
 export function createGame(white: Draft, black: Draft): Game {
   const board = white.board.map((p, square) => copyPiece(p ?? black.board[square]));
   if (inCheck(board, 'w') || inCheck(board, 'b')) throw new Error('A montagem não pode começar em xeque. Protejam a coluna do Rei com uma peça em e2/e7 e confirmem novamente.');
-  const game: Game = { board, turn: 'w', ply: 0, halfmove: 0, enPassant: null, repetitions: {}, lastMove: null };
+  const game: Game = { board, turn: 'w', ply: 0, halfmove: 0, enPassant: null, repetitions: {}, lastMove: null, spells: { w: [...white.spells], b: [...black.spells] } };
   game.repetitions[positionKey(game)] = 1;
   return game;
 }
@@ -157,9 +184,16 @@ export function makeMove(game: Game, from: number, to: number, promotion?: Kind)
   next.repetitions = { ...game.repetitions, [key]: (game.repetitions[key] ?? 0) + 1 };
   return next;
 }
+export function castSpell(game: Game, spellId: string, from: number, to: number): Game {
+  const move = legalSpellMoves(game, game.turn, spellId).find(m => m.from === from && m.to === to);
+  if (!move) throw new Error('Essa peça não pode usar o feitiço nesse destino.');
+  const next = advance(game, move), key = positionKey(next);
+  next.repetitions = { ...game.repetitions, [key]: (game.repetitions[key] ?? 0) + 1 };
+  return next;
+}
 export function insufficientMaterial(board: Board): boolean {
   const pieces = board.map((p, square) => ({ p, square })).filter(({ p }) => p && p.kind !== 'k');
-  if (pieces.some(({ p }) => p!.ability || ['p', 'r', 'q'].includes(p!.kind))) return false;
+  if (pieces.some(({ p }) => p!.weapon || p!.enchantment || ['p', 'r', 'q'].includes(p!.kind))) return false;
   if (pieces.length <= 1) return true;
   return pieces.every(({ p }) => p!.kind === 'b') && new Set(pieces.map(({ square }) => (square % 8 + Math.floor(square / 8)) % 2)).size === 1;
 }
@@ -173,7 +207,8 @@ export function gameResult(game: Game): Result | null {
 export const canClaimDraw = (game: Game) => game.halfmove >= 100 || (game.repetitions[positionKey(game)] ?? 0) >= 3;
 export function describeMove(before: Game, after: Game): string {
   const move = after.lastMove!, piece = before.board[move.from]!;
+  if (move.defended) return `${squareName(move.to)} bloqueada`;
   if (move.castle) return move.to > move.from ? 'O-O' : 'O-O-O';
   const letter: Record<Kind, string> = { p: '', n: 'C', b: 'B', r: 'T', q: 'D', k: 'R' };
-  return `${letter[piece.kind]}${squareName(move.from)}${before.board[move.to] || move.enPassant !== undefined ? '×' : '–'}${squareName(move.to)}${move.promotion ? '=' + letter[move.promotion] : ''}${inCheck(after.board, after.turn) ? '+' : ''}`;
+  return `${move.spell ? '✦ ' : ''}${letter[piece.kind]}${squareName(move.from)}${before.board[move.to] || move.enPassant !== undefined ? '×' : '–'}${squareName(move.to)}${move.promotion ? '=' + letter[move.promotion] : ''}${inCheck(after.board, after.turn) ? '+' : ''}`;
 }
