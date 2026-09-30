@@ -294,6 +294,59 @@ As cartas também foram alargadas para uma referência de 250 px, com menos altu
 - Durante aplicação de carta, a bandeja de recrutamento fica temporariamente oculta e reposicionamento/ações do inspetor ficam indisponíveis, para evitar comandos concorrentes. A loja ganhou “Escolher peça” / “Trocar alvo” no contexto da seleção. Regras, preços do catálogo e validação final do servidor permanecem vigentes.
 - Documentação atualizada; não foram adicionados nem executados testes automatizados nesta etapa. Inspeção visual da bandeja e revisão de código feitas durante a alteração.
 
+## 29. Limpeza dos textos da interface — 30/09/2026
+
+- Removidos o slogan da marca, “Seu preparo”, “Seu saldo”, “Tudo pronto?”, a instrução repetida antes de revisar e a frase decorativa após o resultado.
+- Início e partida usam títulos descritivos: “Xadrez com melhorias”, “Revelação dos exércitos” e “Partida”. Histórico vazio passa a informar “Nenhum lance ainda”.
+- A ficha da peça e o inspetor deixam de repetir instruções de seleção, arraste e recrutamento. A bandeja conserva a casa de destino e a indicação de reembolso. Corrigida a forma singular “1 moeda” no custo de compra.
+- A loja mostra a contagem apenas quando o filtro está aplicado, mantém o alvo selecionado e elimina rótulos redundantes. Custos, efeitos, restrições, avisos de conexão e instruções acessíveis de teclado foram preservados.
+- Alterações restritas ao conteúdo visível e sua renderização; nenhuma regra ou ação de compra foi alterada.
+
+**Verificações:** verificação de tipos e `git diff --check` sem erros. Não foram executados testes automatizados nem inspeção visual nesta etapa.
+
+## 30. Catálogo editável, cor dos alvos e preparação de teste remoto — 30/09/2026
+
+- `lib/abilities.ts`: extraídos os tipos e os 16 registros de habilidades, com um campo por linha. `lib/catalog.ts` preserva reexports, busca e sorteio; IDs, preços e efeitos existentes não mudaram. `docs/habilidades.md` explica os campos, movimentos relativos, saltos e a implementação necessária para efeitos novos.
+- `app/globals.css`: a borda dos alvos válidos durante aplicação de uma carta usa `--color-gold`, a mesma cor da seleção, substituindo o dourado mais escuro fixo.
+- `.nvmrc` fixa Node 22; nvm ativado na sessão usada para os comandos. README atualizado para esse ambiente. Isso não altera terminais que já estavam abertos.
+- `next.config.ts` aceita hostnames explícitos em `DEV_ALLOWED_ORIGINS`; `.env.example` documenta a opção. `docs/teste-com-amigos.md` explica dois túneis temporários (página e partidas), HTTPS/WSS, origem exata, configuração, desligamento e alternativa na mesma rede. Não foi liberada origem curinga.
+- Nenhum túnel foi iniciado: `cloudflared` não está instalado. Acesso externo não foi verificado e nenhum link público foi gerado. Não foi alterado o conteúdo dos arquivos locais `.env`/`.env.local`.
+- **Vida/dano pendente:** usuário quer vencer esgotando a vida adversária e sugeriu valor de 1.000 para o rei. Foi apresentada proposta inicial de 1.200 de vida; dano de peão 100, cavalo/bispo 300, torre 500, dama 900 e rei 1.000. Esses números não são balanceamento aprovado. Foi solicitada definição sobre captura do rei versus xeque-mate/rodadas antes de alterar o motor. Vida continua apenas como atributo inicial nesta etapa.
+
+**Verificações:** verificação de tipos com Node 22 e revisão do diff. Nenhum teste automatizado, build ou teste público de conexão foi executado nesta etapa.
+
+## 31. Vida, capturas, derrota por tempo e venda direta — 30/09/2026
+
+### Regras 0.4.0
+
+- Vida inicial 1.200; dano por peça efetivamente perdida: peão 50, cavalo/bispo 150, torre 250, dama 500, Rei 1.000. Valores isolados em `lib/combat.ts`. `Game` contém vida atual e máxima de ambos, incluídas no estado enviado pelo servidor; repetições levam a vida em conta.
+- Rei pode ser exposto e capturado; não há vitória por mate nem obrigação de responder a xeque. O aviso de ameaça permanece informativo. Roque conserva posição inicial, ausência de movimento e caminho livre, mas não proíbe casas ameaçadas. Preparação ainda exige o Rei fixo; não pode ser vendido nela.
+- Captura en passant desconta dano; promoção muda o dano futuro para o da peça promovida. Segundo coração evita captura e dano na primeira defesa. Vida zero encerra antes de Isca ou empate automático. Reconexão preserva a vida e não reaplica bônus.
+- Relógio esgotado causa derrota sempre, sem punição numérica nem comparação de peças. Também confere o relógio antes de aceitar a escolha de Isca. Novo comando `pass` só é permitido no próprio turno, na posição atual e sem movimentos; ambos sem movimentos empatam. Empates por acordo/repetição/contagem de lances permanecem; material insuficiente para mate foi retirado do encerramento.
+- Catálogo com 18 cartas: Vitalidade (+200 vida, 4 moedas, incomum) e Vigor maior (+400 vida, 7 moedas, raro). Feitiços automáticos usam `trigger: 'health'` e `healthBonus`; diferentes IDs acumulam e cada ID só pode ser comprado uma vez. Custos são parâmetros iniciais, ainda não balanceados por partidas.
+- Barras dos jogadores mostram vida atual/máxima; histórico exibe dano das capturas. Emblemas das novas cartas seguem o padrão visual existente. Regras exibidas na interface atualizadas.
+
+### Venda de peças
+
+- Botão Vender peça com reembolso destacado e área de arraste. Peças sem Arma/Encantamento vendem imediatamente; peças equipadas abrem confirmação com melhorias e reembolso total.
+- Arraste usa a peça de origem, seleciona-a ao começar e verifica se o destino é o botão de venda ativo dentro do painel. Cancelar/perder captura do ponteiro limpa o realce; clique residual é suprimido. Rei, montagem confirmada, compra pendente e seleção de alvo de carta não habilitam venda.
+- Confirmação confere identidade e melhorias da peça novamente antes de enviar. O servidor continua responsável pelo reembolso e pelo orçamento; venda de preparação não causa dano.
+
+### Documentação e verificações
+
+- Atualizados README, regras, guia de habilidades, registro atual e complemento de design. Interface rejeita estado de servidor com versão diferente e orienta reinício; é necessário reiniciar os serviços e criar salas novas.
+- Verificação de tipos com Node 22 e revisão estática do diff. Testes existentes ajustados às novas expectativas (sem exigência de segurança do Rei; feitiço sorteado pode dar vida ou tempo), mas não executados; nenhum teste novo adicionado. A aprovação de 19 testes da versão anterior não valida esta versão.
+- Não executados build, partida completa nem inspeção visual/interativa nesta etapa. Valores e fluxo de arraste precisam de avaliação nas próximas partidas de teste.
+
+## 32. Faixas de tempo e vida — 30/09/2026
+
+- `workshop-0.4.1`: Instante extra cai de 7 para 3 moedas e sobe de 30 para 60 segundos. Raridade passa de rara a incomum. Novas Reserva de tempo (+120 segundos, 5 moedas, rara) e Ampulheta real (+180 segundos, 8 moedas, lendária).
+- Vitalidade (+200) passa de 4 para 3 moedas; Vigor maior (+400), de 7 para 5. Adicionado Vigor real (+600, 8 moedas, lendário). Catálogo agora tem 21 cartas. Valores são parâmetros iniciais de teste, sem afirmação de equilíbrio.
+- Substituído `time-30` por `trigger: 'time'` com `timeBonusSeconds` no catálogo. `startingStats` e o emblema de ampulheta usam o gatilho genérico. Novos bônus da mesma categoria não exigem alterar o motor. IDs diferentes acumulam, cada ID só pode ser comprado uma vez e os limites de moedas/Poder continuam valendo.
+- Descrições das seis cartas resumidas ao bônus. Removidos “Ativação automática”/“Aplicado ao iniciar” da loja e resumo; feitiços identificam o alvo Jogador. Aplicação pelo servidor continua ocorrendo na revelação, sem nova ação manual.
+- README, regras, guia de habilidades, registro e design atualizados. Expectativas existentes de testes ajustadas para preço e segundos do catálogo; nenhum teste novo adicionado nem executado.
+- Verificações: tipos com Node 22 e revisão estática do diff. Não executados build nem inspeção visual nesta etapa. Reiniciar os serviços e abrir salas novas para aplicar a versão.
+
 ---
 
 Registro mantido em [implementacao.md](implementacao.md). Atualize este arquivo ao registrar uma nova etapa.

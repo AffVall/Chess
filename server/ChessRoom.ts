@@ -3,7 +3,7 @@ import { Room, ServerError, type Client } from '@colyseus/core';
 import { z } from 'zod';
 import { ABILITIES, abilityById, generateShop, replacementOffer, RECONNECT_SECONDS, RULESET, type Color } from '../lib/catalog';
 import { applyDraftAction, createDraft, nextRefreshCost, other, validateDraft } from '../lib/draft';
-import { canClaimDraw, createGame, describeMove, gameResult, insufficientMaterial, legalMoves, legalSpellMoves, makeMove, positionKey } from '../lib/chess';
+import { canClaimDraw, createGame, describeMove, gameResult, legalMoves, legalSpellMoves, makeMove, passTurn, positionKey } from '../lib/chess';
 import { MatchClock } from '../lib/clock';
 import { startingStats } from '../lib/player-stats';
 import type { Draft, Game, Move, Phase, PlayerView, Result, Snapshot } from '../lib/types';
@@ -93,6 +93,8 @@ export class ChessRoom extends Room {
       const activatedBait = baitOwner !== null && !next.lastMove?.defended;
       this.history.push(describeMove(this.game!, next));
       this.game = next;
+      // Lethal damage resolves before any post-capture choice.
+      if (Object.values(next.health).some(health => health <= 0)) { this.finish(gameResult(next)!); return; }
       if (activatedBait) {
         const choices = this.baitChoices(baitOwner!);
         if (choices.length) this.pendingBait = { owner: baitOwner!, choices };
@@ -105,10 +107,25 @@ export class ChessRoom extends Room {
       else if (result) this.finish(result);
       else this.publish();
     }));
+    this.onMessage('pass', (client, value: unknown) => this.guard(client, player => {
+      if (!this.active()) return;
+      if (this.pendingBait || player.color !== this.game!.turn) throw new Error('Aguarde a sua vez.');
+      const ply = z.number().int().min(0).parse(value);
+      if (ply !== this.game!.ply) throw new Error('Este comando pertence a uma posição anterior.');
+      this.game = passTurn(this.game!);
+      this.history.push('Passou');
+      this.drawOfferedBy = null;
+      this.timer.changeTurn(this.game.turn, performance.now());
+      this.availableMoves = legalMoves(this.game);
+      const result = gameResult(this.game);
+      if (result) this.finish(result);
+      else this.publish();
+    }));
     this.onMessage('useSpell', client => this.guard(client, () => {
       throw new Error('Os feitiços são aplicados automaticamente no início da partida.');
     }));
     this.onMessage('chooseBait', (client, value: unknown) => this.guard(client, player => {
+      if (!this.active()) return;
       if (!this.pendingBait || this.pendingBait.owner !== player.color || !this.game) throw new Error('Não há uma escolha de Isca para resolver.');
       const action = baitSchema.parse(value), ability = abilityById(action.ability), piece = this.game.board[action.square];
       if (!this.pendingBait.choices.includes(action.ability) || !piece || piece.color !== player.color || piece.kind === 'k' || !ability || !ability.classes.includes(piece.kind === 'r' || piece.kind === 'q' ? 'major' : 'minor')) throw new Error('Escolha uma melhoria compatível com uma peça sua.');
@@ -243,8 +260,7 @@ export class ChessRoom extends Room {
     const expired = this.timer.settle(performance.now());
     if (!expired) return true;
     const winner = other(expired);
-    const canMate = this.game!.board.some(p => p?.color === winner && p.kind !== 'k') && !insufficientMaterial(this.game!.board);
-    this.finish({ winner: canMate ? winner : null, reason: canMate ? 'Tempo esgotado' : 'Tempo esgotado, sem material para mate' });
+    this.finish({ winner, reason: 'Tempo esgotado' });
     return false;
   }
   private finish(result: Result) {
@@ -264,13 +280,14 @@ export class ChessRoom extends Room {
     const snapshot: Snapshot = {
       roomId: this.roomId, mode: this.mode, ruleset: RULESET, phase: this.phase, you: player.color,
       players: [...this.players.values()].map(({ name, color, connected, ready }) => ({ name, color, connected, ready })),
-      playerStats: startingStats(player.draft),
+      playerStats: { ...startingStats(player.draft), ...(this.game ? { health: this.game.health[player.color] } : {}) },
       draft: player.draft, shop: player.shop, refreshCost: nextRefreshCost(player.draft),
       game: this.game ? { ...this.game, repetitions: {} } : null,
       legalMoves: this.game?.turn === player.color && this.phase === 'playing' ? this.availableMoves : [],
       spellMoves: this.game?.turn === player.color && this.phase === 'playing' ? this.game.spells[player.color].flatMap(id => legalSpellMoves(this.game!, player.color, id)) : [],
       clocks: this.timer.remaining, result: this.result, moves: this.history,
       revealUntil: this.revealUntil, drawOfferedBy: this.drawOfferedBy,
+      canPass: this.phase === 'playing' && this.game?.turn === player.color && !this.pendingBait && this.availableMoves.length === 0,
       claimableDraw: this.phase === 'playing' && this.game?.turn === player.color && canClaimDraw(this.game),
       pendingBait: this.pendingBait?.owner === player.color ? { choices: this.pendingBait.choices } : null,
     };

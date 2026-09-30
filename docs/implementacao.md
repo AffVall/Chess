@@ -1,6 +1,6 @@
 # Registro da implementação
 
-> **Estado vigente:** o roteiro `docs/nextmoves.md` foi implementado no conjunto de regras `workshop-0.2.0`. Consulte a seção 20 de [`historico.md`](historico.md) e `docs/regras-prototipo.md` para o comportamento atual; os registros anteriores descrevem etapas históricas e valores já substituídos. Esta etapa foi documentada sem executar testes, typecheck, build ou inspeção visual.
+> **Estado vigente:** `workshop-0.4.1`: vida e dano por captura, Rei capturável, derrota direta por tempo, feitiços de vida e venda por clique/arraste. As [regras atuais](regras-prototipo.md) e as seções 31–32 do [histórico](historico.md) prevalecem sobre os registros anteriores. Verificação de tipos realizada; testes desta versão não executados.
 
 **Data:** 27 de setembro de 2026.  
 **Etapa:** primeiro protótipo local, com preparação e partidas entre dois convidados.  
@@ -96,7 +96,7 @@ A preferência por bastante variedade levou o primeiro catálogo além das 2–3
 | `app/page.tsx` | Página principal; carrega o componente de jogo. |
 | `app/globals.css` | Aparência verde/creme, tabuleiro, mercado, diálogos, estados e regras de layout responsivo. Há ajustes para telas estreitas; verificação específica de celular ainda pendente. |
 | `components/GameApp.tsx` | Fluxo da interface, entrada nas salas, apelido, conexão/reconexão, escolha de peças, mercado, revisão, jogadas, promoção e resultado. |
-| `components/Board.tsx` | Tabuleiro orientado para cada jogador; seleção por clique/toque, casas legais, último lance, indicação de xeque e marcador de habilidade. |
+| `components/Board.tsx` | Tabuleiro orientado para cada jogador; seleção por clique/toque, casas legais, último lance, aviso de Rei ameaçado, arraste para venda e marcador de habilidade. |
 | `components/Piece.tsx` | Desenhos SVG de Rei, dama, torre, bispo, cavalo e peão. Sem serviço externo de imagens. |
 | `components/Modal.tsx` | Diálogos para regras, revisão, promoção e confirmação de saída; tratamento de foco, Tab e Escape. |
 
@@ -107,7 +107,7 @@ A preferência por bastante variedade levou o primeiro catálogo além das 2–3
 | `lib/catalog.ts` | Versão do conjunto de regras, valores das peças, 39 pontos, 12 moedas, 10 minutos, reconexão, catálogo e sorteio de ofertas. |
 | `lib/types.ts` | Contratos de peças, tabuleiro, montagem, ações, partida, resultado e visão enviada ao jogador. |
 | `lib/draft.ts` | Exército inicial, zona permitida, orçamento, compatibilidade, recrutamento, sacrifício, equipamento e reembolsos. |
-| `lib/chess.ts` | Ataques, movimentos possíveis e legais, segurança do Rei, roque, en passant, promoção, repetição, empate, mate e registro textual de lances. |
+| `lib/chess.ts` | Ataques, movimentos possíveis e legais, captura do Rei, dano/vida, roque, en passant, promoção, repetição, empate e registro textual de lances. |
 | `lib/clock.ts` | Contagem autoritativa de tempo, sem acréscimo. Usa tempo monotônico fornecido pelo servidor. |
 
 ### Servidor e ambiente
@@ -189,7 +189,7 @@ Este é um modelo provisório para tornar jogável a preparação. A economia pe
 
 ## 7. Proteções e limitações atuais
 
-Já foram implementados validação autoritativa das ações, restrição por fase/assento/turno, orçamento recalculado, compatibilidade das ofertas, Rei obrigatório, rejeição de posição inicial em xeque, ocultação da montagem adversária e bloqueio de resultado encerrado.
+Já foram implementados validação autoritativa das ações, restrição por fase/assento/turno, orçamento recalculado, compatibilidade das ofertas, Rei obrigatório apenas na preparação, ocultação da montagem adversária e bloqueio de resultado encerrado.
 
 O servidor também tem limite de 12 mensagens por segundo por cliente, limite de tamanho de entrada WebSocket, checagem de origem e limitação simples de requisições por endereço. Essas medidas são básicas e não equivalem a uma solução completa de segurança de produção ou antitrapaça. O código de convite dá acesso à sala privada, até ocupação dos dois lugares.
 
@@ -198,9 +198,9 @@ Limitações a manter visíveis:
 - Não há autenticação de contas, ranqueado, persistência, recuperação após queda do processo nem publicação pública.
 - A fila casual não usa nível/rating.
 - O saldo e os preços são hipóteses, sem dados de balanceamento.
-- A análise de material insuficiente é conservadora com habilidades; não resolve todas as posições mortas possíveis da variante.
+- Material insuficiente para mate não é condição de empate na versão 0.4.0; somente ambos sem movimentos, repetição, contagem de lances ou acordo.
 - A reivindicação de empate só considera condições já atingidas; não implementa a modalidade de anunciar um lance futuro para reivindicar.
-- Se as formações deixarem um Rei inicialmente em xeque, ambos precisam revisar a montagem. O aviso orienta a proteção de e2/e7; esse fluxo ainda pode ser refinado.
+- Formações podem começar com o Rei ameaçado; a decisão de protegê-lo cabe ao jogador.
 - A interface tem regras responsivas, mas a verificação específica de celular foi interrompida antes de acontecer.
 - Um ajuste para evitar que a decoração da página inicial ultrapasse a largura da tela foi aplicado, mas a nova aparência não foi reconferida após o pedido de parar as verificações.
 - Os testes existentes foram mantidos. Nenhum novo teste está sendo criado ou executado na etapa atual de documentação.

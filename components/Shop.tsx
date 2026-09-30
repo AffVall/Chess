@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
-import { abilityById, classForKind, NAMES, POWER_CAP, RARITY_NAMES, TYPE_NAMES, type Ability } from '@/lib/catalog';
+import { abilityById, classForKind, NAMES, RARITY_NAMES, TYPE_NAMES, type Ability } from '@/lib/catalog';
 import { squareName } from '@/lib/draft';
 import type { Snapshot } from '@/lib/types';
 import { AbilityDiagram } from './AbilityDiagram';
@@ -15,11 +15,11 @@ const classExplanation = {
 const typeExplanation = {
   weapon: 'Armas acrescentam movimentos ou capturas às regras normais da peça.',
   enchantment: 'Encantamentos dão à peça um efeito especial, ativado quando a condição descrita acontece.',
-  spell: 'Feitiços são aplicados automaticamente no início da partida. Não é preciso ativá-los durante o jogo.',
+  spell: 'Feitiços aumentam seus atributos nesta partida. Cartas diferentes acumulam; cada carta pode ser comprada uma vez.',
 };
 
-export function Shop({ offers, selected, piece, gold, power, refreshCost, spells, editable, pending, wanted, onChoose, onCancel, onEquip, onRefresh, onInspect }: {
-  offers: Ability[]; selected: number | null; piece: Snapshot['draft']['board'][number]; gold: number; power: number; refreshCost: number; spells: string[];
+export function Shop({ offers, selected, piece, gold, power, powerCap, refreshCost, spells, editable, pending, wanted, onChoose, onCancel, onEquip, onRefresh, onInspect }: {
+  offers: Ability[]; selected: number | null; piece: Snapshot['draft']['board'][number]; gold: number; power: number; powerCap: number; refreshCost: number; spells: string[];
   editable: boolean; pending: boolean; wanted: string | null; onChoose: (id: string) => void;
   onCancel: () => void; onEquip: (id: string) => void; onRefresh: () => void; onInspect: () => void;
 }) {
@@ -72,8 +72,8 @@ export function Shop({ offers, selected, piece, gold, power, refreshCost, spells
     grid.current?.scrollBy({ left: direction * (width + 12) });
   }
   return <section id="market" className="shop" aria-label="Mercado de melhorias" tabIndex={-1}>
-    <div className="shop-toolbar"><div><h2>Loja</h2><span>{piece && filterCompatible ? `${visibleOffers.length} de ${offered.length} melhorias aplicáveis` : `${offered.length} ofertas na loja`}</span></div></div>
-    <div className="market-context"><div><span>Equipar em</span><strong>{target}</strong><button className="text-button" onClick={onInspect}>{piece ? 'Trocar alvo' : 'Escolher peça'}</button></div><label className="compatibility-toggle"><input type="checkbox" checked={filterCompatible} disabled={!piece} onChange={event => setFilterCompatible(event.target.checked)}/>Filtrar Melhorias</label></div>
+    <div className="shop-toolbar"><div><h2>Loja</h2>{piece && filterCompatible && <span>{visibleOffers.length} de {offered.length} compatíveis</span>}</div></div>
+    <div className="market-context"><div>{piece && <strong>{target}</strong>}<button className="text-button" onClick={onInspect}>{piece ? 'Trocar alvo' : 'Escolher peça'}</button></div><label className="compatibility-toggle"><input type="checkbox" checked={filterCompatible} disabled={!piece} onChange={event => setFilterCompatible(event.target.checked)}/>Filtrar Melhorias</label></div>
     {wanted && <p className="shop-note" role="status">Escolha uma peça para {abilityById(wanted)?.name}.<button className="text-button" onClick={onCancel}>Cancelar seleção</button></p>}
     {piece && filterCompatible && visibleOffers.length === 0 && <p className="shop-empty">Nenhuma melhoria disponível para esta peça. Desative o filtro para ver a loja completa.</p>}
     <div className="offer-grid" style={{ "--visible-offers": Math.max(1, visibleOffers.length) } as CSSProperties} ref={grid} onScroll={updatePosition} data-motion={motionActive ? 'running' : 'paused'}>{visibleOffers.map((ability, index) => {
@@ -83,16 +83,16 @@ export function Shop({ offers, selected, piece, gold, power, refreshCost, spells
       const equipped = ability.type === 'spell' ? spells.includes(ability.id) : slotId === ability.id;
       const net = ability.price - (current?.price ?? 0);
       const after = gold - net;
-      const excessPower = Math.max(0, power + net - POWER_CAP);
+      const excessPower = Math.max(0, power + net - powerCap);
       const cost = net < 0 ? `Receber ${-net} moedas` : net === 0 ? 'Sem custo adicional' : `${net} moedas`;
       return <article id={`offer-${ability.id}`} tabIndex={-1} key={ability.id} data-rarity={ability.rarity} style={{ '--offer-delay': `${index * 45}ms` } as CSSProperties} className={`offer-card rarity-${ability.rarity} ${compatible && piece ? 'compatible' : ''} ${!compatible && piece ? 'incompatible' : ''} ${equipped ? 'is-equipped' : ''} ${wanted === ability.id ? 'is-wanted' : ''}`}>
         <div className="offer-effects" aria-hidden="true"><span className="offer-aura"/><span className="offer-sweep"/><span className="offer-motes"><i/><i/><i/></span></div>
         <div className="offer-top"><h3>{ability.name}</h3></div>
         <p className="offer-meta"><TermHelp text={typeExplanation[ability.type]}><span className="offer-type"><AbilityIcon type={ability.type} className="offer-type-icon"/>{TYPE_NAMES[ability.type]}</span></TermHelp><TermHelp align="right" text="A raridade muda a aparência da carta, não o efeito das regras."><span className="rarity-label" data-rarity={ability.rarity}><span className="rarity-gem" aria-hidden="true"/>{RARITY_NAMES[ability.rarity]}</span></TermHelp></p>
-        <div className="offer-class-list" aria-label="Peças compatíveis">{ability.type === 'spell' ? <span className="spell-automatic">Ativação automática</span> : ability.classes.map(pieceClass => <TermHelp key={pieceClass} text={classExplanation[pieceClass]}><span className="offer-class">({pieceClass === 'minor' ? 'Plebeu' : 'Realeza'})</span></TermHelp>)}</div>
+        <div className="offer-class-list" aria-label="Alvo da melhoria">{ability.type === 'spell' ? <span className="offer-class">Jogador</span> : ability.classes.map(pieceClass => <TermHelp key={pieceClass} text={classExplanation[pieceClass]}><span className="offer-class">({pieceClass === 'minor' ? 'Plebeu' : 'Realeza'})</span></TermHelp>)}</div>
         <div className="offer-body">{ability.moves?.length || ability.captures?.length ? <AbilityDiagram ability={ability}/> : <OfferSigil ability={ability}/>}<p>{ability.description}</p></div>
         <div className="offer-foot">
-          {equipped ? <p className="equipped-label">✓ {ability.type === 'spell' ? 'Aplicado ao iniciar' : `Equipado em ${target}`}</p> : compatible ? <div className="purchase-preview">{current && <span>Substitui {current.name}</span>}{after < 0 && <span className="cost-warning">Faltam {-after} moedas.</span>}{excessPower > 0 && <span className="cost-warning">Excede o Poder em {excessPower} {excessPower === 1 ? 'ponto' : 'pontos'}.</span>}</div> : <div className="purchase-preview"/>}
+          {equipped ? <p className="equipped-label">✓ {ability.type === 'spell' ? 'Comprado' : `Equipado em ${target}`}</p> : compatible ? <div className="purchase-preview">{current && <span>Substitui {current.name}</span>}{after < 0 && <span className="cost-warning">Faltam {-after} moedas.</span>}{excessPower > 0 && <span className="cost-warning">Excede o Poder em {excessPower} {excessPower === 1 ? 'ponto' : 'pontos'}.</span>}</div> : <div className="purchase-preview"/>}
           <button disabled={!editable || pending || equipped || (compatible && (after < 0 || excessPower > 0))} onClick={() => compatible ? onEquip(ability.id) : onChoose(ability.id)}>{pending ? 'Aguardando confirmação…' : equipped ? ability.type === 'spell' ? 'Comprado' : 'Equipado' : !compatible ? `Escolher peça · ${ability.price} moedas` : ability.type === 'spell' ? `Comprar · ${ability.price} moedas` : current ? `Trocar · ${cost}` : `Equipar · ${ability.price} moedas`}</button>
         </div>
       </article>;

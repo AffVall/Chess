@@ -60,11 +60,13 @@ test('two real clients: private draft, validation, identical shop, play, reconne
   const originalShop = [...white.probe.state!.shop];
   assert.equal(white.probe.state!.refreshCost, 1);
   const spell = black.probe.state!.shop.map(id => abilityById(id)!).find(item => item.type === 'spell')!;
+  const expectedTime = CLOCK_MS + (spell.trigger === 'time' ? spell.timeBonusSeconds! * 1000 : 0);
+  const expectedHealth = STARTING_HEALTH + (spell.trigger === 'health' ? spell.healthBonus! : 0);
   black.room.send('draft', { type: 'buySpell', ability: spell.id });
   await until(() => black.probe.state?.draft.spells.includes(spell.id) === true, 'buy spell');
   await until(() => black.probe.draftCompletions === 1, 'spell purchase confirmation');
   assert.equal(black.probe.state!.draft.gold, 12 - spell.price);
-  assert.deepEqual(black.probe.state!.playerStats, { health: STARTING_HEALTH, timeMs: CLOCK_MS + 30000 });
+  assert.deepEqual(black.probe.state!.playerStats, { health: expectedHealth, timeMs: expectedTime });
   const blackShopAfterSpell = [...black.probe.state!.shop];
   const ability = white.probe.state!.shop.map(id => abilityById(id)!).find(item => item.type === 'weapon' && item.classes.includes('minor'))!;
   white.room.send('draft', { type: 'equip', square: 12, ability: ability.id });
@@ -93,7 +95,7 @@ test('two real clients: private draft, validation, identical shop, play, reconne
   await until(() => a.state?.phase === 'reveal' && b.state?.phase === 'reveal', 'simultaneous reveal');
   assert.deepEqual(a.state!.game!.board, b.state!.game!.board);
   assert.equal(b.state!.game!.board[12]?.weapon, ability.id);
-  assert.equal(black.probe.state!.clocks.b, CLOCK_MS + 30000);
+  assert.equal(black.probe.state!.clocks.b, expectedTime);
   assert.deepEqual(black.probe.state!.game!.spells.b, [], 'automatic spell consumed at reveal');
   const goldBefore = white.probe.state!.draft.gold;
   white.room.send('draft', { type: 'sacrifice', square: 8 });
@@ -102,7 +104,7 @@ test('two real clients: private draft, validation, identical shop, play, reconne
   white.probe.errors.length = 0;
 
   await until(() => white.probe.state?.phase === 'playing', 'clock start after reveal', 10000);
-  assert.equal(white.probe.state!.clocks.b, CLOCK_MS + 30000);
+  assert.equal(white.probe.state!.clocks.b, expectedTime);
   black.room.send('move', { from: 52, to: 36, ply: 0 });
   await until(() => black.probe.errors.length > 0, 'out of turn rejection');
   assert.match(black.probe.errors.pop()!, /sua vez/);
@@ -113,7 +115,7 @@ test('two real clients: private draft, validation, identical shop, play, reconne
   black.room.send('useSpell', spell.id);
   await until(() => black.probe.errors.length > 0, 'manual spell rejected');
   assert.match(black.probe.errors.pop()!, /automaticamente/);
-  assert.ok(black.probe.state!.clocks.b <= CLOCK_MS + 30000, 'no double bonus');
+  assert.ok(black.probe.state!.clocks.b <= expectedTime, 'no double bonus');
   assert.equal(black.probe.state!.game!.ply, 1, 'the spell does not consume a move');
   black.room.send('move', { from: 52, to: 36, ply: 0 });
   await until(() => black.probe.errors.length > 0, 'stale position rejected');
@@ -127,7 +129,7 @@ test('two real clients: private draft, validation, identical shop, play, reconne
   const resumed = observe(reconnected);
   await until(() => resumed.state?.game?.ply === 1, 'recovered position');
   assert.deepEqual(resumed.state!.shop, black.probe.state!.shop);
-  assert.ok(resumed.state!.clocks.b < CLOCK_MS + 30000, 'disconnect does not pause the clock');
+  assert.ok(resumed.state!.clocks.b < expectedTime, 'disconnect does not pause the clock');
   reconnected.send('move', { from: 52, to: 36, ply: 1 });
   await until(() => white.probe.state?.game?.ply === 2, 'play after reconnection');
   reconnected.send('resign');

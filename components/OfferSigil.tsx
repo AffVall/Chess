@@ -7,9 +7,13 @@ export function OfferSigil({ ability }: { ability: Ability }) {
       <path className="sigil-frame" d="M48 5 91 48 48 91 5 48Z M48 13 83 48 48 83 13 48Z"/>
       <circle className="sigil-ring" cx="48" cy="48" r="27"/>
       <path className="sigil-accents" d="M48 1v10M48 85v10M1 48h10M85 48h10"/>
-      {ability.trigger === 'time-30' ? <>
+      {ability.trigger === 'time' ? <>
         <path d="M34 28h28M34 68h28M37 28v8c0 6 6 9 11 12-5 3-11 6-11 12v8M59 28v8c0 6-6 9-11 12 5 3 11 6 11 12v8"/>
         <path className="sigil-fill" d="m39 34 9 10 9-10ZM39 64l9-10 9 10Z"/>
+      </> : ability.trigger === 'health' ? <>
+        <path d="M48 70 29 51c-13-16 9-30 19-13 10-17 32-3 19 13Z"/>
+        <path strokeWidth="3" d="M48 43v16M40 51h16"/>
+        <path className="sigil-accents" d="M24 22v8M20 26h8M71 65v10M66 70h10"/>
       </> : ability.trigger === 'second-heart' ? <>
         <path d="M48 69 31 51c-14-16 8-28 17-12 9-16 31-4 17 12Z"/>
         <path d="m32 49 9 0 5-8 5 16 5-8h9"/>

@@ -7,7 +7,7 @@ Primeira etapa jogável de um xadrez online com montagem de exércitos e loja al
 
 - A direção visual de [design-do-jogo.md](docs/design-do-jogo.md) está aplicada.
 - Esta versão continua sem conta, saldo persistente, ranking, recompensas pós-partida, PostgreSQL ou cosméticos.
-- A revisão da loja inclui inspeção visual em desktop/celular, verificação de tipos e 19 testes automatizados aprovados; detalhes em `docs/implementacao.md`.
+- A versão atual é `workshop-0.4.1`. Os 19 testes aprovados na revisão anterior não validam as novas regras de vida/dano. Nesta etapa houve verificação de tipos; testes não foram executados. Consulte `docs/historico.md`.
 
 ## Índice
 
@@ -20,7 +20,7 @@ Primeira etapa jogável de um xadrez online com montagem de exércitos e loja al
   - [A loja da preparação](#a-loja-da-preparação)
   - [Produção e variáveis de ambiente](#produção-e-variáveis-de-ambiente)
   - [Erros de conexão](#erros-de-conexão)
-  - [Node 24 desta máquina](#node-24-desta-máquina)
+  - [Node 22 desta máquina](#node-22-desta-máquina)
   - [Testar em celular ou na mesma rede](#testar-em-celular-ou-na-mesma-rede)
 - [Roteiro manual de preparação](#roteiro-manual-de-preparação)
 - [Comandos de verificação](#comandos-de-verificação)
@@ -28,6 +28,9 @@ Primeira etapa jogável de um xadrez online com montagem de exércitos e loja al
 - [Etapas posteriores — ainda não iniciadas](#etapas-posteriores--ainda-não-iniciadas)
 
 ## Documentação do projeto
+
+- [Testar com outra pessoa](docs/teste-com-amigos.md): mesma rede ou dois links temporários pela internet.
+- [Editar habilidades](docs/habilidades.md): catálogo separado em `lib/abilities.ts` e limites dos efeitos declarativos.
 
 - [Direção de design do jogo](docs/design-do-jogo.md): especificação visual de referência para tabuleiro preto/branco, peças, telas, cartas, animações e cosméticos futuros. Aplicada à interface atual; cosméticos continuam adiados.
 - [Próximas regras desejadas](docs/nextmoves.md): anotações originais do usuário. As decisões aplicadas e as regras que não entraram no catálogo estão documentadas em [regras atuais](docs/regras-prototipo.md).
@@ -42,27 +45,28 @@ A documentação distingue decisões expressas do usuário de parâmetros escolh
 
 - Sala privada por código/convite e pareamento casual entre duas pessoas.
 - 39 pontos de material, 12 moedas iniciais, Poder máximo 50, recrutamento, reposicionamento e sacrifício de peças, incluindo peões.
-- Cinco ofertas geradas de um catálogo com 16 Armas, Encantamentos e Feitiços. Ambos recebem a mesma loja inicial; compras repõem o espaço individualmente e atualizar o mercado custa 1, 2, 3… moedas.
-- Compatibilidade por classe: peças menores (peão, cavalo, bispo) e maiores (torre, dama). Cada peça pode combinar uma Arma e um Encantamento; Feitiços são aplicados automaticamente ao iniciar a partida. O painel mostra Vida inicial 1.200 e Tempo base 05:00, incluindo bônus preparados.
+- Cinco ofertas geradas de um catálogo com 21 Armas, Encantamentos e Feitiços. Ambos recebem a mesma loja inicial; compras repõem o espaço individualmente e atualizar o mercado custa 1, 2, 3… moedas.
+- Compatibilidade por classe: peças menores (peão, cavalo, bispo) e maiores (torre, dama). Cada peça pode combinar uma Arma e um Encantamento; Feitiços são aplicados automaticamente ao iniciar a partida. O painel mostra Vida inicial 1.200 e Tempo base 05:00, incluindo bônus preparados. Há três cartas de tempo (+1/+2/+3 minutos) e três de vida (+200/+400/+600), por 3/5/8 moedas em cada categoria.
 - Raridades comum, incomum, raro e lendário, com animação breve em cartas raras e lendárias; movimento reduzido desativa o efeito.
 - Preparação em quatro fileiras próprias, com custo de 2 Poder por peça nas duas fileiras avançadas.
 - Montagens privadas, revisão do exército e revelação simultânea de oito segundos.
 - Servidor Colyseus validando todas as mudanças de orçamento, jogadas, habilidades e resultados.
-- Movimentos tradicionais, roque, en passant, promoção, xeque/mate, empates, desistência, relógios e reconexão por até 60 segundos.
+- Capturas causam dano (50/150/150/250/500/1.000), e vida zero ou relógio esgotado causam derrota. O Rei pode ser capturado sem encerrar automaticamente a partida. Roque, en passant, promoção, empates, desistência e reconexão por até 60 segundos continuam disponíveis.
 - Interface por clique/toque, indicação de movimentos legais, consulta às melhorias do adversário e registro de lances da sala.
 - Direção visual monumental aplicada: tabuleiro preto/branco, peças com acabamento de porcelana/obsidiana, diagramas de melhorias, orçamento, confirmação de sacrifício e layouts responsivos.
 
-**Esta etapa é um protótipo local.** Não há contas, ranking, moeda acumulada, PostgreSQL integrado nem recuperação após reiniciar o servidor. Salas e resultados ficam em memória. O pareamento casual junta dois jogadores disponíveis; ainda não estima nível. Para jogar pela internet será necessário hospedar a interface e o servidor com HTTPS/WSS.
+**Esta etapa é um protótipo local.** Não há contas, ranking, moeda acumulada, PostgreSQL integrado nem recuperação após reiniciar o servidor. Salas e resultados ficam em memória. O pareamento casual junta dois jogadores disponíveis; ainda não estima nível. Para testar pela internet, consulte o [guia de links temporários](docs/teste-com-amigos.md); a configuração está preparada, mas nenhum túnel está ativo por esta alteração.
 
 ## Executar
 
 ### Requisitos
 
-Requisitos: **Node.js 22 ou superior** (24 recomendado) e npm.
+Requisitos: **Node.js 22** e npm. A versão está registrada em `.nvmrc`; execute `nvm use` na pasta do projeto.
 
 ### Primeira execução
 
 ```sh
+nvm use 22
 npm ci
 npm run dev
 ```
@@ -85,12 +89,13 @@ A loja faz parte da preparação: informe um apelido, entre em casual ou crie um
 
 Se aparecer um erro de conexão, a interface oferece **Tentar novamente**. Ela consulta `/health` antes de criar a sala e preserva o convite de reconexão em falhas de rede. A resposta de saúde confirma apenas a disponibilidade HTTP; a entrada na sala ainda depende da conexão WebSocket. O servidor deve ser reiniciado junto com esta atualização para fornecer a resposta de saúde e a confirmação de alterações da preparação. Em produção, configure `ALLOWED_ORIGINS` com a origem pública exata e disponibilize HTTPS/WSS.
 
-### Node 24 desta máquina
+### Node 22 desta máquina
 
-Neste computador, o Node padrão do sistema é 18. A execução feita pelo Codex usa o Node 24 já disponível no ambiente:
+O projeto usa a versão 22 instalada pelo nvm:
 
 ```sh
-PATH=/home/valeria/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin:$PATH npm run dev
+nvm use 22
+npm run dev
 ```
 
 ### Testar em celular ou na mesma rede
@@ -100,14 +105,14 @@ Para conferir no celular na mesma rede, abra `http://IP-DO-COMPUTADOR:3000` e ma
 ## Roteiro manual de preparação
 
 1. Abra duas abas independentes. Na primeira, informe um apelido e crie uma sala. Na segunda, use outro apelido e o código exibido na sala.
-2. Na preparação, confira as cinco ofertas, os valores Material / Poder / Ouro e as casas avançadas. Clique em uma peça e depois em uma casa vazia: ela não deve se mover. Arraste-a para reposicionar; depois selecione um peão e equipe uma melhoria compatível; o servidor atualiza orçamento e poder. Sacrifique outro peão e confira o reembolso.
+2. Na preparação, confira as cinco ofertas, os valores Material / Poder / Ouro e as casas avançadas. Clique em uma peça e depois em uma casa vazia: ela não deve se mover. Arraste-a para reposicionar; depois selecione um peão e equipe uma melhoria compatível; o servidor atualiza orçamento e poder. Venda outro peão e confira o reembolso imediato; arraste uma peça equipada até Vender peça e confira que só vende após confirmar.
 3. Compare as duas abas: a loja inicial deve ser igual e os exércitos devem ficar ocultos durante a montagem. Compre uma oferta em uma aba e confirme que apenas o espaço daquela pessoa é reposto.
-4. Atualize a loja e confira o custo crescente. Se possível, compre Instante extra: o painel deve mostrar 05:30 e o bônus deve ser aplicado automaticamente ao começar a partida.
+4. Atualize a loja e confira o custo crescente. Se possível, compre Instante extra: o painel deve mostrar 06:00 e o bônus deve ser aplicado automaticamente ao começar a partida.
 5. Clique em **Revisar exército** e **Confirmar exército** nas duas abas. Depois de oito segundos de revelação, começa o relógio das brancas.
 6. Mova peças por clique/toque. Apenas o jogador da vez pode jogar; o relógio não ganha segundos após um lance. Consulte habilidades e tente resolver Isca se ela for ativada.
 7. Recarregue uma aba durante a partida: deve recuperar a sala e o estado. O relógio continua. Proponha e aceite empate, ou desista. Uma nova sala começa com 39 pontos e 12 moedas.
 
-Os relógios base dão até cerca de 10 minutos por partida, somados os dois lados, além dos bônus comprados. A preparação tem um limite de 20 minutos neste protótipo para evitar salas esquecidas; esse limite não representa a duração casual pretendida e será ajustado com o uso. As verificações feitas em etapas anteriores estão registradas em [implementacao.md](docs/implementacao.md) e [historico.md](docs/historico.md), incluindo a revisão da loja e os testes mais recentes.
+Os relógios base dão até cerca de 10 minutos por partida, somados os dois lados, além dos bônus comprados. A preparação tem um limite de 20 minutos neste protótipo para evitar salas esquecidas; esse limite não representa a duração casual pretendida e será ajustado com o uso. As verificações feitas em etapas anteriores estão registradas em [implementacao.md](docs/implementacao.md) e [historico.md](docs/historico.md), incluindo a revisão da loja e as verificações de cada versão.
 
 ## Comandos de verificação
 

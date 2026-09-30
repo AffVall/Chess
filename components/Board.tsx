@@ -5,8 +5,8 @@ import type { Board as BoardType, Move } from '@/lib/types';
 import { Piece } from './Piece';
 import { AbilityIcon } from './AbilityIcon';
 const useSafeLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect;
-interface Props { board: BoardType; color: Color; selected?: number | null; legal?: Move[]; lastMove?: Move | null; checked?: number; onSquare?: (square: number) => void; onCancel?: () => void; preparation?: boolean; targetSquares?: number[]; onDropPiece?: (from: number, to: number) => void }
-export function Board({ board, color, selected, legal = [], lastMove, checked, onSquare, onCancel, preparation, targetSquares, onDropPiece }: Props) {
+interface Props { board: BoardType; color: Color; selected?: number | null; legal?: Move[]; lastMove?: Move | null; checked?: number; onSquare?: (square: number) => void; onCancel?: () => void; preparation?: boolean; targetSquares?: number[]; onDropPiece?: (from: number, to: number) => void; onDragSelect?: (square: number) => void; onSellPiece?: (square: number) => void }
+export function Board({ board, color, selected, legal = [], lastMove, checked, onSquare, onCancel, preparation, targetSquares, onDropPiece, onDragSelect, onSellPiece }: Props) {
   const [focused, setFocused] = useState<number | null>(null);
   const frameRef = useRef<HTMLDivElement>(null);
   const positionsRef = useRef<Map<string, number> | null>(null);
@@ -14,6 +14,7 @@ export function Board({ board, color, selected, legal = [], lastMove, checked, o
   const animationsRef = useRef(new Map<string, Animation>());
   const interactive = Boolean(onSquare);
   const pointer = useRef<{ from: number; x: number; y: number; moved: boolean; size: number } | null>(null);
+  const saleHoverRef = useRef<HTMLElement | null>(null);
   const suppressClickUntil = useRef(0);
   const [drag, setDrag] = useState<{ from: number; x: number; y: number; size: number; to: number | null } | null>(null);
   const [keyboardSource, setKeyboardSource] = useState<number | null>(null);
@@ -21,6 +22,16 @@ export function Board({ board, color, selected, legal = [], lastMove, checked, o
     const element = document.elementFromPoint(x, y)?.closest<HTMLElement>('[data-square-index]');
     return element && frameRef.current?.contains(element) ? Number(element.dataset.squareIndex) : null;
   }
+  function saleAt(x: number, y: number) {
+    if (!onSellPiece) return null;
+    const button = document.elementFromPoint(x, y)?.closest<HTMLButtonElement>('[data-piece-sale]');
+    return button && !button.disabled && frameRef.current?.closest('.board-drawer-content')?.contains(button) ? button : null;
+  }
+  function clearSaleHover() {
+    saleHoverRef.current?.removeAttribute('data-drag-over');
+    saleHoverRef.current = null;
+  }
+  useEffect(() => () => { saleHoverRef.current?.removeAttribute('data-drag-over'); }, []);
   function startDrag(event: ReactPointerEvent<HTMLButtonElement>, from: number) {
     const piece = board[from];
     if (!onDropPiece || !piece || piece.color !== color || piece.kind === 'k' || event.button !== 0) return;
@@ -31,17 +42,24 @@ export function Board({ board, color, selected, legal = [], lastMove, checked, o
     const source = pointer.current;
     if (!source) return;
     if (!source.moved && Math.hypot(event.clientX - source.x, event.clientY - source.y) < 7) return;
+    if (!source.moved) onDragSelect?.(source.from);
     source.moved = true;
+    clearSaleHover();
+    saleHoverRef.current = saleAt(event.clientX, event.clientY);
+    saleHoverRef.current?.setAttribute('data-drag-over', 'true');
     event.preventDefault();
     setDrag({ ...source, x: event.clientX, y: event.clientY, to: squareAt(event.clientX, event.clientY) });
   }
   function endDrag(event: ReactPointerEvent<HTMLButtonElement>, cancelled = false) {
     const source = pointer.current;
+    const saleButton = !cancelled ? saleAt(event.clientX, event.clientY) : null;
+    clearSaleHover();
     pointer.current = null;
     setDrag(null);
     if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
     if (!source?.moved) return;
     suppressClickUntil.current = performance.now() + 300;
+    if (saleButton) { onSellPiece?.(source.from); return; }
     const to = squareAt(event.clientX, event.clientY);
     if (!cancelled && to !== null && to !== source.from) onDropPiece?.(source.from, to);
   }
@@ -115,7 +133,7 @@ export function Board({ board, color, selected, legal = [], lastMove, checked, o
         {piece?.heart && <span className="heart-marker" title="Segundo coração disponível">♥</span>}
         {target && <span className={piece ? 'legal-capture' : 'legal-dot'} aria-hidden="true"/>}
       </>;
-      return onSquare ? <button key={square} type="button" tabIndex={square === (focused ?? selected ?? ranks[0] * 8 + files[0]) ? 0 : -1} onFocus={() => setFocused(square)} data-square={squareName(square)} data-square-index={square} className={className} onPointerDown={event => startDrag(event, square)} onPointerMove={moveDrag} onPointerUp={event => endDrag(event)} onPointerCancel={event => endDrag(event, true)} onLostPointerCapture={() => { pointer.current = null; setDrag(null); }} onDragStart={event => event.preventDefault()} onClick={() => { if (performance.now() >= suppressClickUntil.current) onSquare(square); }} onKeyDown={event => {
+      return onSquare ? <button key={square} type="button" tabIndex={square === (focused ?? selected ?? ranks[0] * 8 + files[0]) ? 0 : -1} onFocus={() => setFocused(square)} data-square={squareName(square)} data-square-index={square} className={className} onPointerDown={event => startDrag(event, square)} onPointerMove={moveDrag} onPointerUp={event => endDrag(event)} onPointerCancel={event => endDrag(event, true)} onLostPointerCapture={() => { pointer.current = null; setDrag(null); clearSaleHover(); }} onDragStart={event => event.preventDefault()} onClick={() => { if (performance.now() >= suppressClickUntil.current) onSquare(square); }} onKeyDown={event => {
         if (event.key === 'Escape') { event.preventDefault(); setKeyboardSource(null); onCancel?.(); return; }
         if (onDropPiece && (event.key === ' ' || event.key === 'Enter' && keyboardSource !== null)) {
           event.preventDefault();
@@ -131,7 +149,7 @@ export function Board({ board, color, selected, legal = [], lastMove, checked, o
           const nextFile = Math.max(0, Math.min(7, f + fileDelta));
           frameRef.current?.querySelector<HTMLButtonElement>(`[data-square="${squareName(ranks[nextRow] * 8 + files[nextFile])}"]`)?.focus();
         }
-      }} aria-pressed={selected === square} aria-label={squareName(square) + ': ' + (piece ? NAMES[piece.kind] + (piece.color === 'w' ? ' branco' : ' preto') + (abilities.length ? ', ' + abilityLabel : '') : 'casa vazia') + (targetSquares?.includes(square) ? ', disponível para equipar' : '') + (target ? ', destino disponível' : '') + (square === checked ? ', Rei em xeque' : '')} >{content}</button> : <div key={square} className={className}>{content}</div>;
+      }} aria-pressed={selected === square} aria-label={squareName(square) + ': ' + (piece ? NAMES[piece.kind] + (piece.color === 'w' ? ' branco' : ' preto') + (abilities.length ? ', ' + abilityLabel : '') : 'casa vazia') + (targetSquares?.includes(square) ? ', disponível para equipar' : '') + (target ? ', destino disponível' : '') + (square === checked ? ', Rei ameaçado' : '')} >{content}</button> : <div key={square} className={className}>{content}</div>;
     }))}
   </div></div>;
 }

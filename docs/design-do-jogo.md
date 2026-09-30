@@ -43,7 +43,7 @@ Ordem de referência:
 1. Pedidos atuais do usuário: aparência grandiosa, tabuleiro preto e branco, documentação, cosméticos futuramente equipáveis e obtidos jogando; não implementar cosméticos agora. A solicitação atual autoriza verificar bugs e testar esta revisão.
 2. Este documento: decisões de design e sequência da futura implementação visual.
 3. [nextmoves.md](nextmoves.md): anotações originais do usuário sobre pontuação, classes, raridades e loja; decisões abertas e desvios do MVP estão identificados abaixo.
-4. [regras-prototipo.md](regras-prototipo.md): regras que o servidor executa no protótipo 0.3.0.
+4. [regras-prototipo.md](regras-prototipo.md): regras que o servidor executa no protótipo 0.4.1.
 5. [implementacao.md](implementacao.md): histórico e limites do trabalho realizado.
 6. [historico.md](historico.md): registro cronológico do trabalho, etapa a etapa (seções 11–28).
 
@@ -768,3 +768,15 @@ Esta seção substitui os detalhes conflitantes das revisões anteriores.
 - Aplicação da skill: direção específica ao xadrez, hierarquia tipográfica, composição deliberada, protagonismo visual concentrado e movimento com propósito.
 - Este documento foi originalmente produzido antes de alterar a interface. A aplicação posterior de D1–D6 e seus limites está registrada em [historico.md](historico.md) e [implementacao.md](implementacao.md). Os detalhes de peça são SVG/CSS; não foram adicionados imagens raster nem áudio.
 - Revisão 1.2 em 28/09/2026: aplicado `nextmoves.md` ao catálogo, servidor, montagem, motor, interface e animações; regras executáveis registradas em `regras-prototipo.md`. Esta etapa não rodou testes, typecheck, build nem inspeção visual.
+
+## Atualização de interface — regras 0.4.0 (30/09/2026)
+
+- Vida atual/máxima aparece nas barras dos dois jogadores durante a partida, com medidor e valor numérico. Capturas registram o dano ao lado do lance. Ameaça ao Rei é aviso informativo; não indica jogada obrigatória.
+- Feitiços Vitalidade e Vigor maior usam emblema de coração com cruz, dentro da moldura de ícones existente, nas cores incomum e rara. Os bônus aparecem na Vida da preparação antes de confirmar.
+- Vender peça é um botão largo em bronze/dourado, com ícone de moeda, reembolso destacado e área que recebe arraste. Ao arrastar sobre ele, a borda e o fundo realçam o destino.
+- Sem melhorias, vende imediatamente; com Arma/Encantamento, abre confirmação com nomes, raridades e reembolso. O Rei não pode ser vendido na preparação. Isso substitui as recomendações anteriores de confirmar qualquer sacrifício.
+- A captura/sacrifício do Rei durante a partida é permitida. As regras completas estão em `regras-prototipo.md`; instruções anteriores sobre mate não se aplicam à versão 0.4.0.
+
+### Cartas de atributos — 0.4.1
+
+Tempo e vida têm três faixas com custos 3/5/8 e raridades incomum/rara/lendária. Ampulheta e coração preservam os emblemas existentes. As descrições mostram só o bônus; removidos “Ativação automática” e “Aplicado ao iniciar”, inclusive no resumo. O alvo dos feitiços é “Jogador”. A lógica continua aplicando os bônus ao iniciar a partida.

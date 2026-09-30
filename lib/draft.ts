@@ -11,9 +11,14 @@ export const squareName = (square: number) => 'abcdefgh'[square % 8] + (Math.flo
 export const material = (board: Board) => board.reduce((sum, piece) => sum + (piece ? VALUES[piece.kind] : 0), 0);
 export const spentOnAbilities = (board: Board) => board.reduce((sum, p) => sum + (abilityById(p?.weapon)?.price ?? 0) + (abilityById(p?.enchantment)?.price ?? 0), 0);
 export const advancedPieces = (board: Board, color: Color) => board.reduce((sum, piece, square) => sum + Number(Boolean(piece && piece.color === color && piece.kind !== 'k' && isAdvancedSquare(square, color))), 0);
-export const advancedCost = (board: Board, color: Color) => advancedPieces(board, color) * ADVANCED_RANK_COST;
+export const advancedCost = (board: Board, color: Color) => board.reduce((sum, piece, square) => {
+  if (!piece || piece.color !== color || piece.kind === 'k') return sum;
+  return sum + (isAdvancedSquare(square, color) ? VALUES[piece.kind] : 0);
+}, 0);
+export const currentMaterialCap = (draft: Draft) => MATERIAL_CAP + draft.spells.reduce((sum, id) => sum + (abilityById(id)?.materialCapBonus ?? 0), 0);
+export const currentPowerCap = (draft: Draft) => POWER_CAP + draft.spells.reduce((sum, id) => sum + (abilityById(id)?.powerCapBonus ?? 0), 0);
 export const spentOnSpells = (draft: Draft) => draft.spells.reduce((sum, id) => sum + (abilityById(id)?.price ?? 0), 0);
-export const powerScore = (draft: Draft, color: Color) => material(draft.board) + spentOnAbilities(draft.board) + spentOnSpells(draft) + advancedCost(draft.board, color);
+export const powerScore = (draft: Draft, color: Color) => material(draft.board) + spentOnAbilities(draft.board) + advancedCost(draft.board, color);
 export const nextRefreshCost = (draft: Draft) => draft.shopRefreshes + 1;
 export const refreshesSpent = (count: number) => (count * (count + 1)) / 2;
 const pieceAbilityIds = (piece?: Piece | null) => [piece?.weapon, piece?.enchantment].filter((id): id is string => Boolean(id));
@@ -45,9 +50,11 @@ export function validateDraft(draft: Draft, color: Color, shop: string[]): void 
   for (const id of draft.spells) if (abilityById(id)?.type !== 'spell') throw new Error('Feitiço inválido.');
   if (new Set(draft.spells).size !== draft.spells.length) throw new Error('Não é possível comprar o mesmo feitiço mais de uma vez.');
   const usedMaterial = material(draft.board);
-  if (usedMaterial > MATERIAL_CAP) throw new Error('O exército ultrapassa 39 pontos de material.');
+  const maxMaterial = currentMaterialCap(draft);
+  const maxPower = currentPowerCap(draft);
+  if (usedMaterial > maxMaterial) throw new Error(`O exército ultrapassa ${maxMaterial} pontos de material.`);
   if (usedMaterial + spentOnAbilities(draft.board) + spentOnSpells(draft) + draft.gold + refreshesSpent(draft.shopRefreshes) !== MATERIAL_CAP + STARTING_GOLD) throw new Error('O orçamento da preparação não confere.');
-  if (powerScore(draft, color) > POWER_CAP) throw new Error(`O poder total ultrapassa ${POWER_CAP}.`);
+  if (powerScore(draft, color) > maxPower) throw new Error(`O poder total ultrapassa ${maxPower}.`);
   if (!shop.every(id => abilityById(id)) || new Set(shop).size !== shop.length) throw new Error('A loja desta sala está inválida.');
 }
 export function applyDraftAction(original: Draft, color: Color, shop: string[], action: DraftAction): Draft {
